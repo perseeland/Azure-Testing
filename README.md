@@ -192,30 +192,3 @@ Replace placeholders with actual values during testing.
 | `internal-recon.html` | Resource enumeration | Reconnaissance |
 | `external-recon.html` | External tenant discovery | Reconnaissance |
 
-## 💡 Tips for Effective Use
-
-1. **Start with reconnaissance** - Understand the target environment first
-2. **Document findings** - Keep track of discovered resources and permissions
-3. **Test systematically** - Follow a structured approach to avoid missing vectors
-4. **Verify assumptions** - Confirm access and permissions before exploitation
-5. **Take screenshots** - Document your testing process for reports
-
-## 🔄 Updates & Improvements
-
-This dashboard is continuously updated with:
-- New Azure security features
-- Emerging attack techniques
-- Tool updates and improvements
-- Community-suggested additions
-
-## 📧 Contact & Attribution
-
-- **Author**: Security Testing Dashboard
-- **Purpose**: Educational and authorized security testing
-- **License**: For authorized use only
-
----
-
-**Last Updated**: June 27, 2026
-
-For questions or contributions, please refer to the project repository.
