@@ -40,7 +40,6 @@ Azure Testing/
 │   └── sites.html               # Web App/App Service testing
 │
 ├── Utilities
-│   ├── azure.html               # Main dashboard and navigation
 │   ├── azure.css                # Styling and UI components
 │   └── azure.js                 # JavaScript utilities for interactive tools
 ```
@@ -168,9 +167,12 @@ Replace placeholders with actual values during testing.
 
 ## 🚀 Getting Started
 
-1. Open `azure.html` in a web browser
-2. Select your target assessment area from the sidebar
-3. Follow the step-by-step instructions
+1. Navigate to the `Azure Testing/` folder
+2. Open any HTML file in a web browser based on your testing phase:
+   - Start with `external-recon.html` for initial reconnaissance
+   - Use `tokens.html` for token acquisition
+   - Choose specific tools for exploitation
+3. Follow the step-by-step instructions in each guide
 4. Use the interactive input fields to customize commands
 5. Copy commands and execute them in your terminal
 
