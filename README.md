@@ -2,7 +2,7 @@
 
 A comprehensive security testing and reconnaissance guide for Azure (Entra ID) environments. This project contains interactive HTML dashboards and detailed documentation for Azure security assessment, penetration testing, and cloud infrastructure reconnaissance.
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 Azure Testing/
@@ -44,7 +44,7 @@ Azure Testing/
 │   └── azure.js                 # JavaScript utilities for interactive tools
 ```
 
-## 🎯 Key Features
+## Key Features
 
 ### Interactive Dashboards
 Each HTML file provides an interactive dashboard with:
@@ -86,7 +86,7 @@ Each HTML file provides an interactive dashboard with:
 - Power Platform exploitation
 - Cross-tenant resource access
 
-## 🔧 Tool Reference
+## Tool Reference
 
 ### Microsoft Graph API
 - REST API calls for querying directory objects
@@ -112,7 +112,7 @@ Each HTML file provides an interactive dashboard with:
 - Cross-tenant enumeration
 - Public IP identification
 
-## 📊 Typical Workflow
+## Typical Workflow
 
 1. **Reconnaissance Phase**
    - Use `external-recon.html` for initial tenant discovery
@@ -134,7 +134,7 @@ Each HTML file provides an interactive dashboard with:
    - Exploit automation accounts
    - Access sensitive resources
 
-## ⚠️ Disclaimer
+## Disclaimer
 
 **This toolkit is for authorized security testing and educational purposes only.**
 
@@ -144,7 +144,7 @@ Each HTML file provides an interactive dashboard with:
 - Obtain written authorization before conducting security assessments
 - Responsible disclosure of vulnerabilities is required
 
-## 🔐 Security Considerations
+## Security Considerations
 
 All credentials and sensitive values in this dashboard are **placeholder examples**:
 - Email addresses are anonymized
@@ -155,7 +155,7 @@ All credentials and sensitive values in this dashboard are **placeholder example
 
 Replace placeholders with actual values during testing.
 
-## 📚 Tools & Frameworks Used
+## Tools & Frameworks Used
 
 - **Microsoft Graph API** - Directory and resource queries
 - **Azure CLI** - Command-line Azure management
@@ -165,7 +165,7 @@ Replace placeholders with actual values during testing.
 - **GraphRunner** - Automated Graph API exploitation
 - **Cloud Prowl** - Azure cloud reconnaissance
 
-## 🚀 Getting Started
+## Getting Started
 
 1. Navigate to the `Azure Testing/` folder
 2. Open any HTML file in a web browser based on your testing phase:
@@ -176,7 +176,7 @@ Replace placeholders with actual values during testing.
 4. Use the interactive input fields to customize commands
 5. Copy commands and execute them in your terminal
 
-## 📝 File Details
+## File Details
 
 | File | Purpose | Type |
 |------|---------|------|
