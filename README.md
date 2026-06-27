@@ -2,47 +2,79 @@
 
 A comprehensive security testing and reconnaissance guide for Azure (Entra ID) environments. This project contains interactive HTML dashboards and detailed documentation for Azure security assessment, penetration testing, and cloud infrastructure reconnaissance.
 
+## Overview
+
+This repository provides security professionals, penetration testers, and cloud administrators with a complete toolkit for testing and validating Azure security configurations. Each tool includes step-by-step guides, interactive dashboards, and command examples for:
+
+- User and credential enumeration
+- Token acquisition and manipulation
+- Conditional Access and MFA bypass techniques
+- Resource discovery and exploitation
+- Privilege escalation pathways
+- Data exfiltration scenarios
+
+All tools are presented with interactive HTML interfaces that allow dynamic input and command generation. Users can customize parameters, save frequently used values, and copy commands directly for execution.
+
+## What's Included
+
+**27 Security Testing Tools & Guides**
+- Token acquisition and manipulation tools
+- Conditional Access bypass techniques
+- MFA validation and bypass methods
+- Managed Identity exploitation guides
+- Storage account and Key Vault access methods
+- User enumeration and reconnaissance tools
+- Power Platform security testing
+- Complete resource exploitation guides
+
+**All Credentials Sanitized**
+- All email addresses, passwords, and tokens replaced with placeholders
+- No real credentials or sensitive data included
+- Safe for public repositories and educational use
+
 ## Project Structure
 
-```
-Azure Testing/
-├── Tools & Authentication
-│   ├── az-cli.html              # Azure CLI authentication and usage
-│   ├── az-powershell.html       # Azure PowerShell guide with object inspection
-│   ├── tokens.html              # Token acquisition and manipulation
-│   ├── roadtx.html              # ROADtools token exchange guide
-│   ├── aadinternals.html        # AADInternals PowerShell module guide
-│   ├── graphrunner.html         # GraphRunner tool documentation
-│   └── cloud-prowl.html         # Cloud reconnaissance tool guide
-│
-├── Attack Scenarios & Exploitation
-│   ├── cap.html                 # Conditional Access Bypass techniques
-│   ├── mfa.html                 # MFA bypass and validation techniques
-│   ├── phs.html                 # Password Hash Sync exploitation
-│   ├── managed-identity.html    # Managed Identity exploitation
-│   └── power-platform.html      # Power Platform/Business Apps security
-│
-├── Reconnaissance & Enumeration
-│   ├── external-recon.html      # External Azure reconnaissance
-│   ├── internal-recon.html      # Internal Azure resource enumeration
-│   ├── identity-users-creds.html # User enumeration and credential validation
-│   └── mg-graph.html            # Microsoft Graph API queries
-│
-├── Azure Resources
-│   ├── storage-account.html     # Azure Storage account exploitation
-│   ├── container-app.html       # Container App security testing
-│   ├── virtual-machines.html    # VM enumeration and exploitation
-│   ├── automation-account.html  # Automation Account privilege escalation
-│   ├── automation.html          # Azure Automation runbook exploitation
-│   ├── azure-key-vault.html     # Key Vault secret extraction
-│   ├── mysql-flexible-server.html # MySQL database server testing
-│   ├── network.html             # Network security group enumeration
-│   └── sites.html               # Web App/App Service testing
-│
-├── Utilities
-│   ├── azure.css                # Styling and UI components
-│   └── azure.js                 # JavaScript utilities for interactive tools
-```
+### Tools & Authentication
+Tools and guides for accessing Azure services and acquiring tokens. Includes CLI, PowerShell, and API-based authentication methods.
+- az-cli.html              # Azure CLI authentication and usage
+- az-powershell.html       # Azure PowerShell guide with object inspection
+- tokens.html              # Token acquisition and manipulation
+- roadtx.html              # ROADtools token exchange guide
+- aadinternals.html        # AADInternals PowerShell module guide
+- graphrunner.html         # GraphRunner tool documentation
+- cloud-prowl.html         # Cloud reconnaissance tool guide
+
+### Attack Scenarios & Exploitation
+Advanced exploitation techniques for bypassing security controls and gaining unauthorized access. Includes MFA bypass, Conditional Access bypass, and privilege escalation methods.
+- cap.html                 # Conditional Access Bypass techniques
+- mfa.html                 # MFA bypass and validation techniques
+- phs.html                 # Password Hash Sync exploitation
+- managed-identity.html    # Managed Identity exploitation
+- power-platform.html      # Power Platform/Business Apps security
+
+### Reconnaissance & Enumeration
+Discovery and enumeration tools for identifying users, resources, and permissions within Azure environments. Essential for initial assessment phases.
+- external-recon.html      # External Azure reconnaissance
+- internal-recon.html      # Internal Azure resource enumeration
+- identity-users-creds.html # User enumeration and credential validation
+- mg-graph.html            # Microsoft Graph API queries
+
+### Azure Resources
+Detailed guides for testing and exploiting specific Azure resource types. Each guide covers enumeration, access methods, and potential privilege escalation paths.
+- storage-account.html     # Azure Storage account exploitation
+- container-app.html       # Container App security testing
+- virtual-machines.html    # VM enumeration and exploitation
+- automation-account.html  # Automation Account privilege escalation
+- automation.html          # Azure Automation runbook exploitation
+- azure-key-vault.html     # Key Vault secret extraction
+- mysql-flexible-server.html # MySQL database server testing
+- network.html             # Network security group enumeration
+- sites.html               # Web App/App Service testing
+
+### Utilities
+Supporting files for the interactive dashboards including CSS styling and JavaScript functionality.
+- azure.css                # Styling and UI components
+- azure.js                 # JavaScript utilities for interactive tools
 
 ## Key Features
 
