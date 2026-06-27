@@ -1,0 +1,379 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Power Platform (BAP)</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(curl|jq|uuidgen|roadtx)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const tokRaw = azGet('armTokenInput');
+            const envRaw = azGet('envIdInput');
+            const rtRaw  = azGet('refreshTokenInput');
+            const resRaw = azGet('resourceInput');
+            const dvRaw  = azGet('dvTokenInput');
+            const appRaw = azGet('appIdInput');
+            const lnRaw  = azGet('logicalNameInput');
+            const tokSpan = azSpan(tokRaw, 'eyJ0eXAiOiJKV1Qi[...]<SNIPPED>');
+            const envSpan = azSpan(envRaw, '{ENVIRONMENT_ID}');
+            const rtSpan  = azSpan(rtRaw,  '<refresh-token>');
+            const resSpan = azSpan(resRaw, 'https://org14515725.api.crm11.dynamics.com/');
+            const dvSpan  = azSpan(dvRaw,  'eyJ0eXAiOiJKV1Qi[...]<SNIPPED>');
+            const appSpan = azSpan(appRaw, '{APP_ID}');
+            const lnSpan  = azSpan(lnRaw,  'crad5_misconfiguration');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{ARMTOKEN}', () => tokSpan)
+                    .replaceAll('{ENVID}', () => envSpan)
+                    .replaceAll('{REFRESHTOKEN}', () => rtSpan)
+                    .replaceAll('{RESOURCE}', () => resSpan)
+                    .replaceAll('{DVTOKEN}', () => dvSpan)
+                    .replaceAll('{APPID}', () => appSpan)
+                    .replaceAll('{LOGICALNAME}', () => lnSpan);
+            });
+            try {
+                localStorage.setItem('az_bap_token', tokRaw);
+                localStorage.setItem('az_bap_envid', envRaw);
+                localStorage.setItem('az_bap_rt', rtRaw);
+                localStorage.setItem('az_bap_resource', resRaw);
+                localStorage.setItem('az_bap_dvtoken', dvRaw);
+                localStorage.setItem('az_bap_appid', appRaw);
+                localStorage.setItem('az_bap_logicalname', lnRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    armTokenInput: 'az_bap_token', envIdInput: 'az_bap_envid',
+                    refreshTokenInput: 'az_bap_rt', resourceInput: 'az_bap_resource',
+                    dvTokenInput: 'az_bap_dvtoken', appIdInput: 'az_bap_appid',
+                    logicalNameInput: 'az_bap_logicalname'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#list-envs">List Environments</a></li>
+        <li><a href="#get-env">Get Environment</a></li>
+        <li><a href="#dataverse-token">Dataverse Token</a></li>
+        <li><a href="#dataverse-query">Query Dataverse</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Power Platform (BAP)</h1>
+    <p class="page-subtitle">Enumerate Power Platform environments through the Business Application Platform (BAP) API (<code>api.bap.microsoft.com</code>) with an ARM access token.</p>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="armTokenInput">ARM Token</label>
+                <input type="text" id="armTokenInput" placeholder="eyJ0eXAiOiJKV1Qi...&lt;SNIPPED&gt;" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="envIdInput">Environment ID</label>
+                <input type="text" id="envIdInput" placeholder="{ENVIRONMENT_ID}" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• LIST ENVIRONMENTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="list-envs">
+        <h3 data-toggle="list-envs-body" onclick="toggleSection('list-envs-body')">
+            <i class="fas fa-layer-group"></i> List Environments
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="list-envs-body">
+
+            <div class="command-container">
+                <div class="description"><strong>Set the ARM token</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="armToken={ARMTOKEN}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List environments</strong> (id, display name, region):</div>
+                <div class="command-box multi">
+                    <span class="command multi">curl -s -X GET "https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments?api-version=2020-10-01" \
+     -H "Authorization: Bearer $armToken" \
+     -H "Accept: application/json" \
+     -H "x-ms-client-request-id: $(uuidgen)" | jq '.value[] | {id: .name, displayName: .properties.displayName, region: .location}'</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /list-envs-body -->
+    </div><!-- /list-envs -->
+
+    <!-- â•â• GET ENVIRONMENT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="get-env">
+        <h3 data-toggle="get-env-body" onclick="toggleSection('get-env-body')">
+            <i class="fas fa-circle-info"></i> Get Environment
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="get-env-body">
+
+            <div class="command-container">
+                <div class="description"><strong>Get details</strong> for a specific environment:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s \
+  &quot;https://api.bap.microsoft.com/providers/Microsoft.BusinessAppPlatform/environments/{ENVID}?api-version=2020-10-01&quot; \
+  -H &quot;Authorization: Bearer $armToken&quot; \
+  -H &quot;Accept: application/json&quot; | jq"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /get-env-body -->
+    </div><!-- /get-env -->
+
+    <!-- â•â• DATAVERSE TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="dataverse-token">
+        <h3 data-toggle="dataverse-token-body" onclick="toggleSection('dataverse-token-body')">
+            <i class="fas fa-database"></i> Dataverse Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="dataverse-token-body">
+
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span>To interact with the Power Platform <strong>data plane</strong>, you need a <strong>Dataverse-scoped</strong> access token. The ARM token is enough for environment <em>discovery</em>, but it <strong>cannot query Dataverse resources</strong> inside an environment.</span>
+            </div>
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="refreshTokenInput"><i class="fas fa-key"></i> Refresh Token</label>
+                    <input type="text" id="refreshTokenInput" placeholder="<refresh-token>" oninput="azUpdate()">
+                    <label for="resourceInput"><i class="fas fa-link"></i> Resource (-r / instanceApiUrl)</label>
+                    <input type="text" id="resourceInput" placeholder="https://org14515725.api.crm11.dynamics.com/" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Exchange the refresh token</strong> for a Dataverse access token:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base='roadtx auth --refresh-token "{REFRESHTOKEN}" \
+    -c "04b07795-8ddb-461a-bbee-02f9e1bf7b46" \
+    -r "{RESOURCE}" --tokens-stdout'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /dataverse-token-body -->
+    </div><!-- /dataverse-token -->
+
+    <!-- â•â• QUERY DATAVERSE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="dataverse-query">
+        <h3 data-toggle="dataverse-query-body" onclick="toggleSection('dataverse-query-body')">
+            <i class="fas fa-table-cells"></i> Query Dataverse
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="dataverse-query-body">
+
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span>Set the Dataverse token and run a direct data-plane query against the <code>appmodules</code> endpoint (model-driven apps). A successful response confirms the token works for the right environment; an empty result means no model-driven apps are deployed.</span>
+            </div>
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="dvTokenInput"><i class="fas fa-key"></i> Dataverse Token</label>
+                    <input type="text" id="dvTokenInput" placeholder="eyJ0eXAiOiJKV1Qi...&lt;SNIPPED&gt;" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Set the Dataverse token</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="dataverseToken={DVTOKEN}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List model-driven apps</strong> (appmodules):</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -i -X GET &quot;{RESOURCE}api/data/v9.2/appmodules?\$select=name,uniquename,description&quot; \
+     -H &quot;Authorization: Bearer $dataverseToken&quot; \
+     -H &quot;Accept: application/json&quot; \
+     -H &quot;OData-MaxVersion: 4.0&quot; \
+     -H &quot;OData-Version: 4.0&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List canvas apps</strong> (canvasapps) â€” canvas-based Power Apps in the environment:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET &quot;{RESOURCE}api/data/v9.2/canvasapps?\$select=displayname,name,description&quot; \
+     -H &quot;Authorization: Bearer $dataverseToken&quot; \
+     -H &quot;Accept: application/json&quot; | jq '.value[] | {name: .displayname, internalId: .name}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Get the canvasappid</strong> (the GUID Dataverse uses to identify the app):</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET &quot;{RESOURCE}api/data/v9.2/canvasapps?\$select=canvasappid,displayname&quot; \
+     -H &quot;Authorization: Bearer $dataverseToken&quot; \
+     -H &quot;Accept: application/json&quot; | jq '.'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="appIdInput"><i class="fas fa-fingerprint"></i> Canvas App ID</label>
+                    <input type="text" id="appIdInput" placeholder="{APP_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Fetch the app</strong> by its canvasappid:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET &quot;{RESOURCE}api/data/v9.2/canvasapps({APPID})&quot; \
+     -H &quot;Authorization: Bearer $dataverseToken&quot; \
+     -H &quot;Accept: application/json&quot; | jq '.'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="logicalNameInput"><i class="fas fa-table"></i> Table Logical Name</label>
+                    <input type="text" id="logicalNameInput" placeholder="crad5_misconfiguration" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>List a table's fields</strong> â€” pull the column names for a Dataverse table (e.g. Misconfigurations) for use in later queries:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET &quot;{RESOURCE}api/data/v9.2/EntityDefinitions(LogicalName='{LOGICALNAME}')/Attributes?\$select=LogicalName,DisplayName&quot; \
+     -H &quot;Authorization: Bearer $dataverseToken&quot; \
+     -H &quot;Accept: application/json&quot; | jq '.value[] | {logicalName: .LogicalName, displayName: .DisplayName.LocalizedLabels[0].Label}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Query the table</strong> and pull the key fields:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET &quot;{RESOURCE}api/data/v9.2/crad5_misconfigurations?\$select=crad5_misconfigurationname,crad5_severity,crad5_detectedon&quot; \
+     -H &quot;Authorization: Bearer $dataverseToken&quot; \
+     -H &quot;Accept: application/json&quot; \
+     -H &quot;OData-MaxVersion: 4.0&quot; \
+     -H &quot;OData-Version: 4.0&quot; | jq '.value[] | {Issue: .crad5_misconfigurationname, Severity: .crad5_severity, Detected: .crad5_detectedon}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="note-box info">
+                    <i class="fas fa-circle-info"></i>
+                    <span><strong>How the jq filter works:</strong> OData wraps records in a top-level <code>value</code> array. <code>.value[]</code> streams each record out one at a time; <code>{ ... }</code> builds a new object per record â€” the left of each <code>:</code> is a label you pick (Issue/Severity/Detected), the right (<code>.crad5_*</code>) is the actual Dataverse column. The column names come from the <strong>List a table's fields</strong> (Attributes) query above. Note: <code>Severity</code> returns a raw choice code (e.g. <code>985750002</code>); the text label lives in <code>crad5_severityname</code>.</span>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /dataverse-query-body -->
+    </div><!-- /dataverse-query -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation Account</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Get-AzAutomationVariable|Get-AzAutomationRunbook|Get-AzVM|Get-AzResource|Get-AzRoleAssignment|Connect-AzAccount|Select-Object|Sort-Object|Format-Table|Import-Module|Install-Module|Get-AzAccessToken|Invoke-RestMethod|Get-AzAutomationConnection)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const rgRaw   = azGet('rgInput');
+            const aaRaw   = azGet('aaNameInput');
+            const rgSpan = azSpan(rgRaw, 'mbt-rg-25');
+            const aaSpan = azSpan(aaRaw, 'AutoTaskRunner');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{RG}', () => rgSpan)
+                    .replaceAll('{AANAME}', () => aaSpan);
+            });
+            try {
+                localStorage.setItem('az_aa_rg', rgRaw);
+                localStorage.setItem('az_aa_name', aaRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = { rgInput: 'az_aa_rg', aaNameInput: 'az_aa_name' };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#automation-variables">Automation Variables</a></li>
+        <li><a href="#automation-runbooks">Runbooks</a></li>
+        <li><a href="#permissions">Permissions</a></li>
+        <li><a href="#connections">Connections</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">Automation Account</h1>
+
+    <!-- ── Inputs ───────────────────────────────────────────── -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="rgInput">Resource Group</label>
+                <input type="text" id="rgInput" placeholder="mbt-rg-25" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="aaNameInput">Automation Account</label>
+                <input type="text" id="aaNameInput" placeholder="AutoTaskRunner" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- ══ AUTOMATION VARIABLES ══════════════════════════════ -->
+    <div class="topic-section red" id="automation-variables">
+        <h3 data-toggle="automation-variables-body" onclick="toggleSection('automation-variables-body')">
+            <i class="fas fa-gears"></i> Automation Variables
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="automation-variables-body">
+
+            <div class="command-container">
+                <div class="cmd-label">AZ PowerShell</div>
+                <div class="description">
+                    <strong>Read automation variables</strong> (can hold secrets / credentials):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzAutomationVariable -ResourceGroupName "{RG}" -AutomationAccountName "{AANAME}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /automation-variables-body -->
+    </div><!-- /automation-variables -->
+
+    <!-- ══ RUNBOOKS ══════════════════════════════════════════ -->
+    <div class="topic-section green" id="automation-runbooks">
+        <h3 data-toggle="automation-runbooks-body" onclick="toggleSection('automation-runbooks-body')">
+            <i class="fas fa-book"></i> Runbooks
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="automation-runbooks-body">
+
+            <div class="command-container">
+                <div class="cmd-label">AZ PowerShell</div>
+                <div class="description">
+                    <strong>List runbooks</strong> (name, type, state, timestamps):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzAutomationRunbook -ResourceGroupName "{RG}" -AutomationAccountName "{AANAME}" | Format-Table Name, RunbookType, State, CreatedTime, LastModifiedTime'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /automation-runbooks-body -->
+    </div><!-- /automation-runbooks -->
+
+    <!-- ══ PERMISSIONS ═══════════════════════════════════════ -->
+    <div class="topic-section peach" id="permissions">
+        <h3 data-toggle="permissions-body" onclick="toggleSection('permissions-body')">
+            <i class="fas fa-user-shield"></i> Permissions
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="permissions-body">
+
+            <div class="command-container">
+                <div class="cmd-label">AZ PowerShell</div>
+                <div class="description">
+                    <strong>List permissions assigned to the current user</strong> on the Automation Account:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$automationAccount = Get-AzAutomationAccount
+$Token = (Get-AzAccessToken -AsSecureString).Token
+$AccessToken = [System.Net.NetworkCredential]::new(&quot;&quot;, $Token).Password
+$SubscriptionID = $automationAccount.SubscriptionID
+$ResourceGroupName = $automationAccount.ResourceGroupName
+$automationAccountName = $automationAccount.AutomationAccountName
+$URI = &quot;https://management.azure.com/subscriptions/$SubscriptionID/resourceGroups/$ResourceGroupName/providers/Microsoft.Automation/automationAccounts/$automationAccountName/providers/Microsoft.Authorization/permissions?api-version=2022-04-01&quot;
+$RequestParams = @{
+    Method  = 'GET'
+    Uri     = $URI
+    Headers = @{
+        'Authorization' = &quot;Bearer $AccessToken&quot;
+    }
+    ContentType = &quot;application/json&quot;
+}
+$Result = Invoke-RestMethod @RequestParams
+$Result.value | fl *
+$Result.value.actions | fl *"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>List permissions assigned to the current user</strong> on a Runbook:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$automationAccount = Get-AzAutomationAccount
+$Token = (Get-AzAccessToken -AsSecureString).Token
+$AccessToken = [System.Net.NetworkCredential]::new(&quot;&quot;, $Token).Password
+$SubscriptionID = $automationAccount.SubscriptionID
+$ResourceGroupName = $automationAccount.ResourceGroupName
+$automationAccountName = $automationAccount.AutomationAccountName
+$runbookName = (Get-AzAutomationRunbook -ResourceGroupName $ResourceGroupName -AutomationAccountName $automationAccountName).Name
+$URI = &quot;https://management.azure.com/subscriptions/$SubscriptionID/resourceGroups/$ResourceGroupName/providers/Microsoft.Automation/automationAccounts/$automationAccountName/runbooks/$runbookName/providers/Microsoft.Authorization/permissions?api-version=2022-04-01&quot;
+$RequestParams = @{
+    Method  = 'GET'
+    Uri     = $URI
+    Headers = @{
+        'Authorization' = &quot;Bearer $AccessToken&quot;
+    }
+    ContentType = &quot;application/json&quot;
+}
+$Result = Invoke-RestMethod @RequestParams
+$Result.value | fl *
+$Result.value.actions | fl *"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /permissions-body -->
+    </div><!-- /permissions -->
+
+    <!-- ══ CONNECTIONS ═══════════════════════════════════════ -->
+    <div class="topic-section yellow" id="connections">
+        <h3 data-toggle="connections-body" onclick="toggleSection('connections-body')">
+            <i class="fas fa-link"></i> Connections
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="connections-body">
+
+            <div class="command-container">
+                <div class="cmd-label">AZ PowerShell</div>
+                <div class="description">
+                    <strong>Get the Automation account</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="$AutomationAccount = Get-AzAutomationAccount"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>List all connections</strong> in the Automation Account:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzAutomationConnection -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /connections-body -->
+    </div><!-- /connections -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

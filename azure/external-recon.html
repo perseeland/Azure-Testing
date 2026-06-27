@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>External Recon</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azDomain() {
+            const el = document.getElementById('domainInput');
+            return (el && el.value.trim()) || 'EXAMPLE.com';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(curl|jq|xmllint|echo|for|do|done|cat|sed|awk|grep|git|python3|rm|cd)\b/g, '<span class="tok-key">$1</span>');
+            s = s.replace(/\b(subscriptions|resourceGroups|providers|storageAccounts|blobServices|containers|blobs|resources)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azUpdate() {
+            const raw = document.getElementById('domainInput').value.trim();
+            const baseRaw = raw ? raw.replace(/\.[^.]+$/, '') : '';
+            const storAccRaw = azGet('storageAccInput');
+            const domainSpan = azSpan(raw, 'EXAMPLE.com');
+            const baseSpan = azSpan(baseRaw, 'EXAMPLE');
+            const storAccSpan = azSpan(storAccRaw, 'megabigtechconf');
+            document.querySelectorAll('.command').forEach(el => {
+                let src = el.getAttribute('data-base');
+                if (src === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    src = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(src))
+                    .replaceAll('{DOMAIN}', () => domainSpan)
+                    .replaceAll('{BASE}', () => baseSpan)
+                    .replaceAll('{STORACC}', () => storAccSpan);
+            });
+            try {
+                localStorage.setItem('az_domain', raw);
+                localStorage.setItem('az_storacc', storAccRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            let saved = '';
+            try { saved = localStorage.getItem('az_domain') || ''; } catch (e) {}
+            if (saved) document.getElementById('domainInput').value = saved;
+
+            let storageSaved = '';
+            try { storageSaved = localStorage.getItem('az_storacc') || ''; } catch (e) {}
+            if (storageSaved) document.getElementById('storageAccInput').value = storageSaved;
+
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#external-recon">External Recon</a></li>
+        <li><a href="#subdomain-enum">Subdomain Enumeration</a></li>
+        <li><a href="#blob-containers">Identify Blob Containers</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">External Recon</h1>
+
+    <!-- ── Domain input ─────────────────────────────────────── -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="domainInput">Target Domain</label>
+                <input type="text" id="domainInput" placeholder="EXAMPLE.com" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- ══ EXTERNAL RECON ════════════════════════════════════ -->
+    <div class="topic-section red" id="external-recon">
+        <h3 data-toggle="external-recon-body" onclick="toggleSection('external-recon-body')">
+            <i class="fas fa-globe"></i> External Recon
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="external-recon-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Get user realm</strong> — check if the domain is Managed or Federated (open in a browser):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="https://login.microsoftonline.com/getuserrealm.srf?login={DOMAIN}&xml=1"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>Retrieve Tenant ID</strong> — pull the token endpoint from the OpenID configuration (the GUID in the URL is the tenant ID):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="curl -s 'https://login.microsoftonline.com/{DOMAIN}/.well-known/openid-configuration' | jq -r '.token_endpoint'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /external-recon-body -->
+    </div><!-- /external-recon -->
+
+    <!-- ══ SUBDOMAIN ENUMERATION ═════════════════════════════ -->
+    <div class="topic-section green" id="subdomain-enum">
+        <h3 data-toggle="subdomain-enum-body" onclick="toggleSection('subdomain-enum-body')">
+            <i class="fas fa-sitemap"></i> Subdomain Enumeration
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="subdomain-enum-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>AzSubEnum</strong> — Azure service subdomains via permutations:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="python3 /opt/mcrtp_bootcamp_tools/AzSubEnum/azsubenum.py -b {BASE} -t 10 -p /opt/mcrtp_bootcamp_tools/AzSubEnum/permutations.txt"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>dnsrecon</strong> — DNS brute force:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="dnsrecon -d {DOMAIN} -t brt -D /usr/share/seclists/Discovery/DNS/subdomains-top1million-5000.txt"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /subdomain-enum-body -->
+    </div><!-- /subdomain-enum -->
+
+    <!-- ══ BLOB CONTAINERS ═══════════════════════════════════ -->
+    <div class="topic-section peach" id="blob-containers">
+        <h3 data-toggle="blob-containers-body" onclick="toggleSection('blob-containers-body')">
+            <i class="fas fa-box-archive"></i> Identify Blob Containers
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="blob-containers-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Clone basicblobfinder</strong> and clear the default namelist:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="git clone https://github.com/joswr1ght/basicblobfinder && cd basicblobfinder && rm namelist"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="storageAccInput"><i class="fas fa-database"></i> Storage Account Prefix</label>
+                    <input type="text" id="storageAccInput" placeholder="megabigtechconf" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Build the namelist</strong> — storage account prefix + permutation wordlist:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="for word in $(cat /opt/mcrtp_bootcamp_tools/AzSubEnum/permutations.txt); do echo {STORACC}:$word >> namelist; done"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>Run basicblobfinder</strong> against the namelist:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="python3 basicblobfinder.py namelist"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /blob-containers-body -->
+    </div><!-- /blob-containers -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

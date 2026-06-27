@@ -1,0 +1,326 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MG Graph</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Install-Module|Import-Module|Connect-MgGraph|Disconnect-MgGraph|Get-MgContext|Get-MgUser|Get-MgGroup|Get-MgGroupMember|Get-MgDirectoryRole|Get-MgDirectoryRoleMember|Get-MgApplication|Get-MgServicePrincipal|ConvertTo-SecureString|Select-Object|Where-Object|Out-File)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const tokRaw = azGet('tokenInput');
+            const userRaw = azGet('userIdInput');
+            const tokSpan = azSpan(tokRaw, '{GRAPH_TOKEN_SNIPPET}');
+            const userSpan = azSpan(userRaw, '{USERNAME3@COMPANY.com}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{TOKEN}', () => tokSpan)
+                    .replaceAll('{USERID}', () => userSpan);
+            });
+            try {
+                localStorage.setItem('az_mgtoken', tokRaw);
+                localStorage.setItem('az_mg_userid', userRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = { tokenInput: 'az_mgtoken', userIdInput: 'az_mg_userid' };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#setup">Setup</a></li>
+        <li><a href="#connect">Connect</a></li>
+        <li><a href="#context">Context</a></li>
+        <li><a href="#users">Users</a></li>
+        <li><a href="#groups">Groups</a></li>
+        <li><a href="#roles">Directory Roles</a></li>
+        <li><a href="#apps">Apps &amp; Service Principals</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">MG Graph</h1>
+    <p class="page-subtitle">Microsoft Graph PowerShell SDK (<code>Microsoft.Graph</code> module) â€” connect and enumerate Entra ID / M365.</p>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="tokenInput">Access Token</label>
+                <input type="text" id="tokenInput" placeholder="{GRAPH_TOKEN_SNIPPET}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="userIdInput">User (UPN / ID)</label>
+                <input type="text" id="userIdInput" placeholder="{USERNAME3@COMPANY.com}" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• SETUP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="setup">
+        <h3 data-toggle="setup-body" onclick="toggleSection('setup-body')">
+            <i class="fas fa-download"></i> Setup
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="setup-body">
+            <div class="command-container">
+                <div class="description"><strong>Install</strong> the Microsoft Graph module (once):</div>
+                <div class="command-box">
+                    <span class="command">Install-Module Microsoft.Graph -Scope CurrentUser -Force</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Import</strong> it into the session:</div>
+                <div class="command-box">
+                    <span class="command">Import-Module Microsoft.Graph</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• CONNECT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="connect">
+        <h3 data-toggle="connect-body" onclick="toggleSection('connect-body')">
+            <i class="fas fa-plug"></i> Connect
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="connect-body">
+
+            <div class="note-box warn">
+                <i class="fas fa-triangle-exclamation"></i>
+                <span><strong>No plaintext password auth.</strong> <code>Connect-MgGraph</code> has no username/password (ROPC) option â€” only interactive, device code, app secret/cert, managed identity, or <code>-AccessToken</code>. To use a password: mint a token out-of-band via ROPC (<code>findmeaccess</code> / <code>curl</code> to <code>/oauth2/v2.0/token</code>) then connect with <code>-AccessToken</code>. Note: v2+ requires a <strong>SecureString</strong> (hence <code>ConvertTo-SecureString</code>).</span>
+            </div>
+
+            <div class="command-container">
+                <div class="description"><strong>With an access token</strong> (paste yours above):</div>
+                <div class="command-box">
+                    <span class="command" data-base='Connect-MgGraph -AccessToken (ConvertTo-SecureString "{TOKEN}" -AsPlainText -Force)'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Disconnect</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Disconnect-MgGraph</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• CONTEXT â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="context">
+        <h3 data-toggle="context-body" onclick="toggleSection('context-body')">
+            <i class="fas fa-id-badge"></i> Context
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="context-body">
+            <div class="command-container">
+                <div class="description"><strong>Who am I</strong> â€” current session context (account, scopes, tenant):</div>
+                <div class="command-box">
+                    <span class="command">Get-MgContext</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command">Get-MgContext | Select-Object Account, TenantId, Scopes</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• USERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="users">
+        <h3 data-toggle="users-body" onclick="toggleSection('users-body')">
+            <i class="fas fa-users"></i> Users
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="users-body">
+            <div class="command-container">
+                <div class="description"><strong>List all users</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Get-MgUser -All | Select-Object DisplayName, UserPrincipalName, Id</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Get a specific user</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-MgUser -UserId "{USERID}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>On-prem synced users</strong> (UPNs):</div>
+                <div class="command-box">
+                    <span class="command">Get-MgUser -Filter "onPremisesSyncEnabled eq true" -All | Select-Object -ExpandProperty UserPrincipalName</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• GROUPS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section yellow" id="groups">
+        <h3 data-toggle="groups-body" onclick="toggleSection('groups-body')">
+            <i class="fas fa-user-group"></i> Groups
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="groups-body">
+            <div class="command-container">
+                <div class="description"><strong>List all groups</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Get-MgGroup -All | Select-Object DisplayName, Id, GroupTypes</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Members of a group</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Get-MgGroupMember -GroupId "&lt;group-id&gt;" | Select-Object Id, AdditionalProperties</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• DIRECTORY ROLES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section mauve" id="roles">
+        <h3 data-toggle="roles-body" onclick="toggleSection('roles-body')">
+            <i class="fas fa-user-shield"></i> Directory Roles
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="roles-body">
+            <div class="command-container">
+                <div class="description"><strong>List active directory roles</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Get-MgDirectoryRole -All | Select-Object DisplayName, Id</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Members of a role</strong> (e.g. Global Administrator):</div>
+                <div class="command-box">
+                    <span class="command">Get-MgDirectoryRoleMember -DirectoryRoleId "&lt;role-id&gt;"</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• APPS & SERVICE PRINCIPALS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="apps">
+        <h3 data-toggle="apps-body" onclick="toggleSection('apps-body')">
+            <i class="fas fa-cubes"></i> Apps &amp; Service Principals
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="apps-body">
+            <div class="command-container">
+                <div class="description"><strong>App registrations</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Get-MgApplication -All | Select-Object DisplayName, AppId, Id</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Service principals</strong> (enterprise apps):</div>
+                <div class="command-box">
+                    <span class="command">Get-MgServicePrincipal -All | Select-Object DisplayName, AppId, Id</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

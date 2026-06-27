@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Azure Key Vault</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Invoke-RestMethod|Write-Host|ForEach-Object|Connect-AzAccount|Get-AzKeyVaultKey|Get-AzKeyVaultSecret|Bearer|Authorization|Content-Type|IncludeVersions)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const vaultRaw = azGet('vaultNameInput');
+            const apiVerRaw = azGet('apiVersionInput');
+            const tokenRaw = azGet('accessTokenInput');
+            const secretRaw = azGet('secretNameInput');
+            const psTokenRaw = azGet('psAccessTokenInput');
+            const psKvTokenRaw = azGet('psKeyVaultAccessTokenInput');
+            const vaultSpan = azSpan(vaultRaw, 'mbtdev');
+            const apiVerSpan = azSpan(apiVerRaw, '7.1');
+            const tokenSpan = azSpan(tokenRaw, 'eyJ0eXAiOiJKV1QiLC...');
+            const secretSpan = azSpan(secretRaw, 'ProdSigningKey');
+            const psTokenSpan = azSpan(psTokenRaw, '<YOUR-ARM-TOKEN>');
+            const psKvTokenSpan = azSpan(psKvTokenRaw, '<YOUR-KV-TOKEN>');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{VAULT}', () => vaultSpan)
+                    .replaceAll('{APIVER}', () => apiVerSpan)
+                    .replaceAll('{TOKEN}', () => tokenSpan)
+                    .replaceAll('{SECRET}', () => secretSpan)
+                    .replaceAll('{PSTOKEN}', () => psTokenSpan)
+                    .replaceAll('{PSKVTOKEN}', () => psKvTokenSpan);
+            });
+            try {
+                localStorage.setItem('az_kv_vault', vaultRaw);
+                localStorage.setItem('az_kv_apiver', apiVerRaw);
+                localStorage.setItem('az_kv_token', tokenRaw);
+                localStorage.setItem('az_kv_secret', secretRaw);
+                localStorage.setItem('az_kv_pstoken', psTokenRaw);
+                localStorage.setItem('az_kv_pskvtoken', psKvTokenRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    vaultNameInput: 'az_kv_vault', apiVersionInput: 'az_kv_apiver',
+                    accessTokenInput: 'az_kv_token', secretNameInput: 'az_kv_secret',
+                    psAccessTokenInput: 'az_kv_pstoken', psKeyVaultAccessTokenInput: 'az_kv_pskvtoken'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#list-secrets">List Secrets (REST API)</a></li>
+        <li><a href="#powershell">AZ PowerShell Module</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">Azure Key Vault</h1>
+
+    <!-- ══ OVERVIEW ══════════════════════════════════════════ -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>What it is</strong> — a managed service for securely storing and accessing secrets (API keys, passwords, connection strings, tokens, certificates, etc.).</li>
+                <li><strong>Access methods</strong> — Azure RBAC controls who can list/read/delete secrets via the ARM management plane; the Key Vault REST API (with an access token) allows reading secret values.</li>
+                <li><strong>Managed identity integration</strong> — if a Container App, VM, or Automation Account has a managed identity with Key Vault access, it can retrieve secrets via the REST API without hardcoding credentials.</li>
+                <li><strong>Network access</strong> — Key Vaults can be configured for public access, private endpoint, or firewall rules; enumerate firewall rules and allowed subnets for possible bypass.</li>
+                <li><strong>Secrets at risk</strong> — once you have an access token (via managed identity or user/service principal credentials), you can list all secrets and retrieve their values via the REST API.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ══ LIST SECRETS ═══════════════════════════════════════ -->
+    <div class="topic-section red" id="list-secrets">
+        <h3 data-toggle="list-secrets-body" onclick="toggleSection('list-secrets-body')">
+            <i class="fas fa-key"></i> List Secrets
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="list-secrets-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="vaultNameInput"><i class="fas fa-vault"></i> Vault Name</label>
+                    <input type="text" id="vaultNameInput" placeholder="mbtdev" oninput="azUpdate()">
+                    <label for="apiVersionInput"><i class="fas fa-code"></i> API Version</label>
+                    <input type="text" id="apiVersionInput" placeholder="7.1" oninput="azUpdate()">
+                    <label for="accessTokenInput"><i class="fas fa-key"></i> Access Token</label>
+                    <input type="text" id="accessTokenInput" placeholder="eyJ0eXAiOiJKV1QiLC..." oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Retrieve all secrets</strong> from the Key Vault using an access token:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$vaultName = &quot;{VAULT}&quot;
+$apiVersion = &quot;{APIVER}&quot;
+$accessToken = &quot;{TOKEN}&quot;
+$headers = @{
+    'Authorization' = &quot;Bearer $accessToken&quot;
+    'Content-Type' = 'application/json'
+}
+$uri = &quot;https://$vaultName.vault.azure.net/secrets?api-version=$apiVersion&quot;
+$response = Invoke-RestMethod -Uri $uri -Method Get -Headers $headers
+$response.value | ForEach-Object {
+    Write-Host &quot;Secret Name: $($_.id)&quot;
+}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="secretNameInput"><i class="fas fa-file-secret"></i> Secret Name</label>
+                    <input type="text" id="secretNameInput" placeholder="ProdSigningKey" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Retrieve a specific secret value</strong> from the Key Vault (reuses the Vault Name, API Version, and Access Token above):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$secretName = &quot;{SECRET}&quot;
+$apiVersion = &quot;{APIVER}&quot;
+$vaultName = &quot;{VAULT}&quot;
+$accessToken = &quot;{TOKEN}&quot;
+
+$secretUri = &quot;https://$vaultName.vault.azure.net/secrets/${secretName}?api-version=$apiVersion&quot;
+$headers = @{
+    'Authorization' = &quot;Bearer $accessToken&quot;
+    'Content-Type' = 'application/json'
+}
+$secretResponse = Invoke-RestMethod -Uri $secretUri -Method Get -Headers $headers
+Write-Host &quot;Secret Value: $($secretResponse.value)&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- ══ AZ POWERSHELL MODULE ══════════════════════════════ -->
+    <div class="topic-section green" id="powershell">
+        <h3 data-toggle="powershell-body" onclick="toggleSection('powershell-body')">
+            <i class="fas fa-terminal"></i> AZ PowerShell Module
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="powershell-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="psAccessTokenInput"><i class="fas fa-key"></i> Access Token (ARM)</label>
+                    <input type="text" id="psAccessTokenInput" placeholder="&lt;YOUR-ARM-TOKEN&gt;" oninput="azUpdate()">
+                    <label for="psKeyVaultAccessTokenInput"><i class="fas fa-key"></i> Key Vault Access Token</label>
+                    <input type="text" id="psKeyVaultAccessTokenInput" placeholder="&lt;YOUR-KV-TOKEN&gt;" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Connect to Azure</strong> with both ARM and Key Vault access tokens:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Connect-AzAccount -AccessToken {PSTOKEN} -KeyVaultAccessToken {PSKVTOKEN} -AccountID anything"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>List all keys</strong> in the Key Vault:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzKeyVaultKey -VaultName &quot;&lt;KEY_VAULT_NAME&gt;&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get a specific key with all versions</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzKeyVaultKey -VaultName &quot;ASbehoxt277&quot; -Name &quot;asxusbvl277&quot; -IncludeVersions"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>List all secrets</strong> in the Key Vault:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzKeyVaultSecret -VaultName &quot;&lt;VAULT_NAME&gt;&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get a specific secret with all versions</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzKeyVaultSecret -VaultName '&lt;Your-Vault-Name&gt;' -Name '&lt;Your-Secret-Name&gt;' -IncludeVersions"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

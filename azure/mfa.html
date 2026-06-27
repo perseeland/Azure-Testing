@@ -1,0 +1,310 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MFA</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+        .user-bar select {
+            background: var(--bg-dark);
+            border: 1px solid var(--border-strong);
+            color: var(--text);
+            border-radius: var(--radius-sm);
+            padding: 6px 10px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.82rem;
+            max-width: 340px;
+        }
+        .user-bar select:focus { outline: none; border-color: var(--accent); }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            // PowerShell cmdlets / functions
+            s = s.replace(/\b(IEX|iwr|Import-Module|Invoke-MFASweep|Invoke-RestMethod|Connect-MgGraph|findmeaccess)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const userRaw = azGet('usernameInput');
+            const passRaw = azGet('passwordInput');
+            const uaRaw   = azGet('uaInput');
+            const cidRaw  = azGet('clientIdInput');
+            const resRaw  = azGet('resourceInput');
+            const userSpan = azSpan(userRaw, '{USERNAME5@COMPANY.com}');
+            const passSpan = azSpan(passRaw, '{PASSWORD_PLACEHOLDER4}');
+            const uaSpan   = azSpan(uaRaw, 'Mozilla/5.0 (X11; CrOS x86_64 15633.69.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.6045.212 Safari/537.36');
+            const cidSpan  = azSpan(cidRaw, 'd3590ed6-52b3-4102-aeff-aad2292ab01c');
+            const resSpan  = azSpan(resRaw, 'https://management.azure.com');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan)
+                    .replaceAll('{USERAGENT}', () => uaSpan)
+                    .replaceAll('{CLIENTID}', () => cidSpan)
+                    .replaceAll('{RESOURCE}', () => resSpan);
+            });
+            try {
+                localStorage.setItem('az_username', userRaw);
+                localStorage.setItem('az_password', passRaw);
+                localStorage.setItem('az_ua', uaRaw);
+                localStorage.setItem('az_clientid', cidRaw);
+                localStorage.setItem('az_mfa_resource', resRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = { usernameInput: 'az_username', passwordInput: 'az_password', uaInput: 'az_ua', clientIdInput: 'az_clientid', resourceInput: 'az_mfa_resource' };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#mfasweep">MFASweep</a></li>
+        <li><a href="#mfa-gaps">Check MFA Gaps</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">MFA</h1>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="usernameInput">Username</label>
+                <input type="text" id="usernameInput" placeholder="{USERNAME5@COMPANY.com}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="passwordInput">Password</label>
+                <input type="text" id="passwordInput" placeholder="{PASSWORD_PLACEHOLDER4}" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• MFASWEEP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="mfasweep">
+        <h3 data-toggle="mfasweep-body" onclick="toggleSection('mfasweep-body')">
+            <i class="fas fa-shield-halved"></i> Check MFA Enablement Gaps Externally (MFASweep)
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="mfasweep-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Load MFASweep</strong> â€” pull it from GitHub:
+                </div>
+                <div class="command-box">
+                    <span class="command">IEX (iwr 'https://raw.githubusercontent.com/dafthack/MFASweep/master/MFASweep.ps1')</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>OR</strong> import a local copy:
+                </div>
+                <div class="command-box">
+                    <span class="command">Import-Module /opt/mcrtp_bootcamp_tools/MFASweep/MFASweep.ps1</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Run the sweep</strong> â€” recon MFA across services (incl. ADFS):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Invoke-MFASweep -Username {USERNAME} -Password '{PASSWORD}' -Recon -IncludeADFS"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /mfasweep-body -->
+    </div><!-- /mfasweep -->
+
+    <!-- â•â• CHECK MFA GAPS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="mfa-gaps">
+        <h3 data-toggle="mfa-gaps-body" onclick="toggleSection('mfa-gaps-body')">
+            <i class="fas fa-user-shield"></i> Check MFA Gaps (FindMeAccess)
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="mfa-gaps-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="clientIdInput"><i class="fas fa-id-card"></i> Client ID</label>
+                    <select id="clientIdInput" onchange="azUpdate()">
+                        <option value="d3590ed6-52b3-4102-aeff-aad2292ab01c" selected>Microsoft Office</option>
+                        <option value="04b07795-8ddb-461a-bbee-02f9e1bf7b46">Microsoft Azure CLI</option>
+                        <option value="1fec8e78-bce4-4aaf-ab1b-5451cc387264">Microsoft Teams</option>
+                        <option value="1950a258-227b-4e31-a9cf-717495945fc2">Microsoft Azure PowerShell</option>
+                    </select>
+                    <label for="resourceInput"><i class="fas fa-link"></i> Resource (-r)</label>
+                    <select id="resourceInput" onchange="azUpdate()">
+                        <option value="https://management.azure.com" selected>Azure RM (management.azure.com)</option>
+                        <option value="https://graph.microsoft.com">Microsoft Graph (graph.microsoft.com)</option>
+                        <option value="https://graph.windows.net">Azure AD Graph (graph.windows.net)</option>
+                        <option value="https://storage.azure.com">Storage (storage.azure.com)</option>
+                        <option value="https://vault.azure.net">Key Vault (vault.azure.net)</option>
+                        <option value="https://database.windows.net">Azure SQL (database.windows.net)</option>
+                        <option value="https://api.spaces.skype.com">Microsoft Teams (api.spaces.skype.com)</option>
+                    </select>
+                </div>
+
+                <div class="description">
+                    <strong>Audit</strong> a user's access across services:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess audit -u {USERNAME} -p '{PASSWORD}' -c {CLIENTID} -r {RESOURCE}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Audit with all user agents</strong> (<code>--ua_all</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess audit -u {USERNAME} -p '{PASSWORD}' -c {CLIENTID} -r {RESOURCE} --ua_all"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>List available user agents</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command">findmeaccess audit --list_ua</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="uaInput"><i class="fas fa-window-restore"></i> User Agent</label>
+                    <select id="uaInput" onchange="azUpdate()">
+                        <option value="Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.6167.178 Mobile Safari/537.36">Android Chrome</option>
+                        <option value="Mozilla/5.0 (iPhone; CPU iPhone OS 17_3_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.2 Mobile/15E148 Safari/604.1">iPhone Safari</option>
+                        <option value="Mozilla/5.0 (Macintosh; Intel Mac OS X 14.3; rv:123.0) Gecko/20100101 Firefox/123.0">Mac Firefox</option>
+                        <option value="Mozilla/5.0 (X11; CrOS x86_64 15633.69.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/119.0.6045.212 Safari/537.36" selected>Chrome OS</option>
+                        <option value="Mozilla/5.0 (X11; Linux i686; rv:94.0) Gecko/20100101 Firefox/94.0">Linux Firefox</option>
+                        <option value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36">Windows 10 Chrome</option>
+                        <option value="Mozilla/5.0 (Windows NT 6.1; Trident/7.0; rv:11.0) like Gecko">Windows 7 IE11</option>
+                        <option value="Mozilla/5.0 (Windows NT 10.0; Trident/7.0; rv:11.0) like Gecko">Windows 10 IE11</option>
+                        <option value="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36 Edg/121.0.2277.128">Windows 10 Edge</option>
+                        <option value="Mozilla/5.0 (compatible; MSIE 9.0; Windows Phone OS 7.5; Trident/5.0; IEMobile/9.0; NOKIA; Lumia 800)">Windows Phone</option>
+                    </select>
+                </div>
+
+                <div class="description">
+                    <strong>Request a token</strong> with the selected user agent:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c {CLIENTID} -r {RESOURCE} --user_agent '{USERAGENT}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /mfa-gaps-body -->
+    </div><!-- /mfa-gaps -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

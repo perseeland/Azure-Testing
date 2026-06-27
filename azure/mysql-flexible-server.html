@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MySQL Flexible Server</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Get-AzMySqlFlexibleServer|Get-AzResource|Select-Object|Sort-Object|fl|sudo|apt|install|mysql)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const rgRaw   = azGet('rgInput');
+            const srvRaw  = azGet('serverInput');
+            const fqdnRaw = azGet('fqdnInput');
+            const dbUserRaw = azGet('dbUserInput');
+            const dbNameRaw = azGet('dbNameInput');
+            const rgSpan  = azSpan(rgRaw,  'mbt-rg-17');
+            const srvSpan = azSpan(srvRaw, 'mbt-payments-db-1');
+            const hostRaw = fqdnRaw || (srvRaw ? `${srvRaw}.mysql.database.azure.com` : '');
+            const hostSpan = azSpan(hostRaw, 'mbt-payments-db-1.mysql.database.azure.com');
+            const dbUserSpan = azSpan(dbUserRaw, 'paymentuser');
+            const dbNameSpan = azSpan(dbNameRaw, 'payments');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{RG}', () => rgSpan)
+                    .replaceAll('{SERVER}', () => srvSpan)
+                    .replaceAll('{HOST}', () => hostSpan)
+                    .replaceAll('{DBUSER}', () => dbUserSpan)
+                    .replaceAll('{DBNAME}', () => dbNameSpan);
+            });
+            try {
+                localStorage.setItem('az_mysql_rg', rgRaw);
+                localStorage.setItem('az_mysql_server', srvRaw);
+                localStorage.setItem('az_mysql_fqdn', fqdnRaw);
+                localStorage.setItem('az_mysql_dbuser', dbUserRaw);
+                localStorage.setItem('az_mysql_dbname', dbNameRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    rgInput: 'az_mysql_rg', serverInput: 'az_mysql_server',
+                    fqdnInput: 'az_mysql_fqdn',
+                    dbUserInput: 'az_mysql_dbuser', dbNameInput: 'az_mysql_dbname'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#discover">Discover Server</a></li>
+        <li><a href="#connect">Connect</a></li>
+        <li><a href="#enumeration">Enumeration</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">MySQL Flexible Server</h1>
+
+    <!-- ══ OVERVIEW ══════════════════════════════════════════ -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>What it is</strong> — managed MySQL database (the modern alternative to "Single Server").</li>
+                <li><strong>Networking</strong> — may allow <strong>public access</strong> via firewall rules; check for overly broad ranges (e.g. <code>0.0.0.0-255.255.255.255</code>).</li>
+                <li><strong>Auth</strong> — MySQL native (username/password) and/or Microsoft Entra logins.</li>
+                <li><strong>Creds</strong> — look in Container App / App Service env vars, Key Vault secrets, Automation Account variables, or ARM templates.</li>
+                <li><strong>ARM roles</strong> (Reader/Contributor) only manage the server resource (e.g. firewall) — valid MySQL credentials are needed for database access.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ══ DISCOVER SERVER ═══════════════════════════════════ -->
+    <div class="topic-section red" id="discover">
+        <h3 data-toggle="discover-body" onclick="toggleSection('discover-body')">
+            <i class="fas fa-magnifying-glass"></i> Discover Server
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="discover-body">
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="rgInput"><i class="fas fa-folder"></i> Resource Group</label>
+                    <input type="text" id="rgInput" placeholder="mbt-rg-17" oninput="azUpdate()">
+                    <label for="serverInput"><i class="fas fa-server"></i> Server Name</label>
+                    <input type="text" id="serverInput" placeholder="mbt-payments-db-1" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="cmd-label">AZ PowerShell</div>
+                <div class="description">
+                    <strong>Show full details</strong> of a MySQL Flexible Server (admin login, FQDN, networking, version, etc.):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzMySqlFlexibleServer -ResourceGroupName "{RG}" -Name "{SERVER}" | fl'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- ══ CONNECT ═══════════════════════════════════════════ -->
+    <div class="topic-section green" id="connect">
+        <h3 data-toggle="connect-body" onclick="toggleSection('connect-body')">
+            <i class="fas fa-database"></i> Connect
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="connect-body">
+
+            <div class="command-container">
+                <div class="description">
+                    <strong>Install the MariaDB client</strong> (compatible with MySQL Flexible Server):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="sudo apt install mariadb-client -y"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="fqdnInput"><i class="fas fa-globe"></i> FQDN</label>
+                    <input type="text" id="fqdnInput" placeholder="mbt-payments-db-1.mysql.database.azure.com" oninput="azUpdate()">
+                    <label for="dbUserInput"><i class="fas fa-user"></i> DB User</label>
+                    <input type="text" id="dbUserInput" placeholder="paymentuser" oninput="azUpdate()">
+                    <label for="dbNameInput"><i class="fas fa-database"></i> Database</label>
+                    <input type="text" id="dbNameInput" placeholder="payments" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Connect</strong> to the database (FQDN above overrides the Server Name-derived host):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="mysql -h {HOST} -u {DBUSER} -D {DBNAME} -p"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- ══ ENUMERATION ═══════════════════════════════════════ -->
+    <div class="topic-section peach" id="enumeration">
+        <h3 data-toggle="enumeration-body" onclick="toggleSection('enumeration-body')">
+            <i class="fas fa-list"></i> Enumeration
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="enumeration-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Confirm the current user</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="select system_user();"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>List databases</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="show databases;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>Switch to a database</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="use DATABASE;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>List tables</strong> in the current database:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="show tables;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description">
+                    <strong>Dump a table</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="SELECT * FROM DATABASE.TABLES"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

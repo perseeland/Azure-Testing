@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AZ CLI</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(az)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const userRaw   = azGet('usernameInput');
+            const passRaw   = azGet('passwordInput');
+            const cidRaw    = azGet('clientIdInput');
+            const secretRaw = azGet('clientSecretInput');
+            const tidRaw    = azGet('tenantIdInput');
+            const roleNameRaw = azGet('roleNameInput');
+            const userSpan   = azSpan(userRaw,   '<username>');
+            const passSpan   = azSpan(passRaw,   '<password>');
+            const cidSpan    = azSpan(cidRaw,    '<clientId>');
+            const secretSpan = azSpan(secretRaw, '<clientSecret>');
+            const tidSpan    = azSpan(tidRaw,    '<tenantId>');
+            const roleNameSpan = azSpan(roleNameRaw, 'Website Contributor');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan)
+                    .replaceAll('{CLIENTID}', () => cidSpan)
+                    .replaceAll('{CLIENTSECRET}', () => secretSpan)
+                    .replaceAll('{TENANTID}', () => tidSpan)
+                    .replaceAll('{ROLENAME}', () => roleNameSpan);
+            });
+            try {
+                localStorage.setItem('az_cli_user', userRaw);
+                localStorage.setItem('az_cli_pass', passRaw);
+                localStorage.setItem('az_cli_clientid', cidRaw);
+                localStorage.setItem('az_cli_secret', secretRaw);
+                localStorage.setItem('az_cli_tenant', tidRaw);
+                localStorage.setItem('az_cli_rolename', roleNameRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    usernameInput: 'az_cli_user', passwordInput: 'az_cli_pass',
+                    clientIdInput: 'az_cli_clientid', clientSecretInput: 'az_cli_secret',
+                    tenantIdInput: 'az_cli_tenant', roleNameInput: 'az_cli_rolename'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#user-login">User Login</a></li>
+        <li><a href="#spn-login">Service Principal Login</a></li>
+        <li><a href="#list-resources">List Resources</a></li>
+        <li><a href="#role-assignments">Role Assignments</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">AZ CLI</h1>
+
+    <!-- ══ USER LOGIN ════════════════════════════════════════ -->
+    <div class="topic-section red" id="user-login">
+        <h3 data-toggle="user-login-body" onclick="toggleSection('user-login-body')">
+            <i class="fas fa-user"></i> User Login
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="user-login-body">
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="usernameInput"><i class="fas fa-user"></i> Username</label>
+                    <input type="text" id="usernameInput" placeholder="<username>" oninput="azUpdate()">
+                    <label for="passwordInput"><i class="fas fa-lock"></i> Password</label>
+                    <input type="text" id="passwordInput" placeholder="<password>" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Interactive login</strong> (browser):</div>
+                <div class="command-box">
+                    <span class="command">az login</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Log in</strong> with a username and password:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az login -u {USERNAME} -p '{PASSWORD}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Get an access token</strong> for Microsoft Graph:</div>
+                <div class="command-box">
+                    <span class="command">az account get-access-token --resource https://graph.microsoft.com</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Get an access token</strong> for ARM (management):</div>
+                <div class="command-box">
+                    <span class="command">az account get-access-token --resource https://management.azure.com</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /user-login-body -->
+    </div><!-- /user-login -->
+
+    <!-- ══ SERVICE PRINCIPAL LOGIN ═══════════════════════════ -->
+    <div class="topic-section green" id="spn-login">
+        <h3 data-toggle="spn-login-body" onclick="toggleSection('spn-login-body')">
+            <i class="fas fa-robot"></i> Service Principal Login
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="spn-login-body">
+
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span><strong>Microsoft Graph API — SPN Access Token</strong> (application-level permission). Authenticates as the service principal itself; permissions come from the app's granted roles.</span>
+            </div>
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="clientIdInput"><i class="fas fa-id-card"></i> Client ID</label>
+                    <input type="text" id="clientIdInput" placeholder="<clientId>" oninput="azUpdate()">
+                    <label for="clientSecretInput"><i class="fas fa-key"></i> Client Secret</label>
+                    <input type="text" id="clientSecretInput" placeholder="<clientSecret>" oninput="azUpdate()">
+                    <label for="tenantIdInput"><i class="fas fa-building"></i> Tenant ID</label>
+                    <input type="text" id="tenantIdInput" placeholder="<tenantId>" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Log in</strong> as a service principal:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az login --service-principal -u {CLIENTID} -p {CLIENTSECRET} -t {TENANTID}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /spn-login-body -->
+    </div><!-- /spn-login -->
+
+    <!-- ══ LIST RESOURCES ════════════════════════════════════ -->
+    <div class="topic-section peach" id="list-resources">
+        <h3 data-toggle="list-resources-body" onclick="toggleSection('list-resources-body')">
+            <i class="fas fa-cubes"></i> List Resources
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="list-resources-body">
+
+            <div class="command-container">
+                <div class="description"><strong>Name, group, type &amp; tags</strong> (table):</div>
+                <div class="command-box">
+                    <span class="command">az resource list --query "[].{name:name,resourceGroup:resourceGroup,types:type,tagg:tags}" -o table</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /list-resources-body -->
+    </div><!-- /list-resources -->
+
+    <!-- ══ ROLE ASSIGNMENTS ══════════════════════════════════ -->
+    <div class="topic-section green" id="role-assignments">
+        <h3 data-toggle="role-assignments-body" onclick="toggleSection('role-assignments-body')">
+            <i class="fas fa-user-shield"></i> Role Assignments
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="role-assignments-body">
+
+            <div class="command-container">
+                <div class="description"><strong>Role assignments</strong> for the signed-in user (all scopes):</div>
+                <div class="command-box">
+                    <span class="command">az role assignment list --assignee $(az ad signed-in-user show --query id -o tsv) --all -o table</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Role &amp; Scope Summary</strong> for the signed-in user (role + scope only):</div>
+                <div class="command-box">
+                    <span class="command">az role assignment list --assignee $(az ad signed-in-user show --query id -o tsv) --all --query "[].{role:roleDefinitionName, scope:scope}" -o table</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="roleNameInput"><i class="fas fa-id-badge"></i> Role Name</label>
+                    <input type="text" id="roleNameInput" placeholder="Website Contributor" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Role Definition</strong> — permitted/denied actions for a role:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az role definition list --name &quot;{ROLENAME}&quot; --query &quot;[].permissions[0].{actions:actions, notActions:notActions, dataActions:dataActions, notDataActions:notDataActions}&quot; -o jsonc"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /role-assignments-body -->
+    </div><!-- /role-assignments -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

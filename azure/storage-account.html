@@ -1,0 +1,478 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Storage Account</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Get-AzResource|Get-AzStorageAccount|Select-Object|Sort-Object|Invoke-RestMethod|findmeaccess|curl|xmllint|az)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const rgRaw   = azGet('rgInput');
+            const acctRaw = azGet('accountInput');
+            const userRaw = azGet('usernameInput');
+            const passRaw = azGet('passwordInput');
+            const tokRaw  = azGet('storageTokenInput');
+            const contRaw = azGet('containerInput');
+            const blobRaw     = azGet('blobInput');
+            const saNameRaw   = azGet('saNameInput');
+            const shareNameRaw = azGet('shareNameInput');
+            const acctKeyRaw  = azGet('acctKeyInput');
+            const filePathRaw = azGet('filePathInput');
+            const rgSpan      = azSpan(rgRaw,       'mbt-rg-15');
+            const acctSpan    = azSpan(acctRaw,     'configbackupfiles');
+            const userSpan    = azSpan(userRaw,     '{USERNAME4@COMPANY.com}');
+            const passSpan    = azSpan(passRaw,     'Paaa$5w0Rd!!');
+            const tokSpan     = azSpan(tokRaw,      'eyJ0eXAiOiJKV1Qi[...]<SNIPPED>');
+            const contSpan    = azSpan(contRaw,     'peterfiles');
+            const blobSpan    = azSpan(blobRaw,     'credentials.txt');
+            const saNameSpan  = azSpan(saNameRaw,   'configbackupfiles');
+            const shareNameSpan = azSpan(shareNameRaw, 'myfileshare');
+            const acctKeySpan  = azSpan(acctKeyRaw,  '<ACCOUNT-KEY>');
+            const filePathSpan = azSpan(filePathRaw, '.cloudconsole/acc_laura.img');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{RG}', () => rgSpan)
+                    .replaceAll('{ACCOUNT}', () => acctSpan)
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan)
+                    .replaceAll('{STORAGETOKEN}', () => tokSpan)
+                    .replaceAll('{CONTAINER}', () => contSpan)
+                    .replaceAll('{BLOB}', () => blobSpan)
+                    .replaceAll('{SA_NAME}', () => saNameSpan)
+                    .replaceAll('{SHARE_NAME}', () => shareNameSpan)
+                    .replaceAll('{ACCT_KEY}', () => acctKeySpan)
+                    .replaceAll('{FILE_PATH}', () => filePathSpan);
+            });
+            try {
+                localStorage.setItem('az_sa_rg', rgRaw);
+                localStorage.setItem('az_sa_account', acctRaw);
+                localStorage.setItem('az_sa_user', userRaw);
+                localStorage.setItem('az_sa_pass', passRaw);
+                localStorage.setItem('az_sa_token', tokRaw);
+                localStorage.setItem('az_sa_container', contRaw);
+                localStorage.setItem('az_sa_blob', blobRaw);
+                localStorage.setItem('az_sa_saname', saNameRaw);
+                localStorage.setItem('az_sa_share', shareNameRaw);
+                localStorage.setItem('az_sa_acctkey', acctKeyRaw);
+                localStorage.setItem('az_sa_filepath', filePathRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    rgInput: 'az_sa_rg', accountInput: 'az_sa_account',
+                    usernameInput: 'az_sa_user', passwordInput: 'az_sa_pass',
+                    storageTokenInput: 'az_sa_token', containerInput: 'az_sa_container',
+                    blobInput: 'az_sa_blob', saNameInput: 'az_sa_saname',
+                    shareNameInput: 'az_sa_share', acctKeyInput: 'az_sa_acctkey',
+                    filePathInput: 'az_sa_filepath'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#discover">Discover Accounts</a></li>
+        <li><a href="#token">Storage Token</a></li>
+        <li><a href="#containers">List Containers</a></li>
+        <li><a href="#blobs">List Blobs</a></li>
+        <li><a href="#read">Read Blob</a></li>
+        <li><a href="#az-cli">AZ CLI</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Storage Account</h1>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="rgInput">Resource Group</label>
+                <input type="text" id="rgInput" placeholder="mbt-rg-15" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="accountInput">Storage Account</label>
+                <input type="text" id="accountInput" placeholder="configbackupfiles" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="usernameInput">Username</label>
+                <input type="text" id="usernameInput" placeholder="{USERNAME4@COMPANY.com}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="passwordInput">Password</label>
+                <input type="text" id="passwordInput" placeholder="Paaa$5w0Rd!!" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="storageTokenInput">Storage Token</label>
+                <input type="text" id="storageTokenInput" placeholder="eyJ0eXAi...&lt;SNIPPED&gt;" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• OVERVIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>Storage Account</strong> â€” an Azure resource holding <strong>blobs</strong>, files, queues and tables. Blob data lives at <code>https://&lt;account&gt;.blob.core.windows.net</code>.</li>
+                <li><strong>Storage Keys</strong> â€” two account-level shared keys that grant <strong>full control of all data</strong> in the account (effectively root). Anyone with a key can read/write everything.</li>
+                <li><strong>Storage Token</strong> â€” an Entra (OAuth) access token scoped to <code>https://storage.azure.com/</code>. Lets a user/principal access blob data via <strong>RBAC</strong>, without the account keys.</li>
+                <li><strong>Common data-plane roles</strong>:
+                    <ul>
+                        <li><strong>Storage Blob Data Reader</strong> â€” read/list blobs.</li>
+                        <li><strong>Storage Blob Data Contributor</strong> â€” read/write/delete blobs.</li>
+                        <li><strong>Storage Blob Data Owner</strong> â€” full control incl. POSIX ACLs.</li>
+                        <li><strong>Reader / Contributor</strong> â€” management-plane only (see the account, but <em>cannot</em> read blob data without a data role).</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- â•â• DISCOVER ACCOUNTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="discover">
+        <h3 data-toggle="discover-body" onclick="toggleSection('discover-body')">
+            <i class="fas fa-magnifying-glass"></i> Discover Accounts
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="discover-body">
+            <div class="command-container">
+                <div class="cmd-label">AZ PowerShell</div>
+                <div class="description"><strong>List all resources</strong> (find storage accounts):</div>
+                <div class="command-box">
+                    <span class="command">Get-AzResource | Select-Object ResourceGroupName,ResourceType, Name | Sort-Object ResourceType</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Show a specific storage account</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzStorageAccount -ResourceGroupName "{RG}" -Name "{ACCOUNT}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• STORAGE TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="token">
+        <h3 data-toggle="token-body" onclick="toggleSection('token-body')">
+            <i class="fas fa-key"></i> Storage Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="token-body">
+
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span>To reach the <strong>data plane</strong> (read blobs), you need a <strong>storage-scoped access token</strong> (<code>https://storage.azure.com/</code>). An ARM/management token can see the account but <strong>cannot</strong> read its blob contents.</span>
+            </div>
+
+            <div class="command-container">
+                <div class="description"><strong>Request a storage token</strong> (FindMeAccess):</div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c f05ff7c9-f75a-4acd-a3b5-f4b6a870245d -r https://storage.azure.com/"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Set the token</strong> (PowerShell):</div>
+                <div class="command-box">
+                    <span class="command" data-base='$storageToken = "{STORAGETOKEN}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• LIST CONTAINERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="containers">
+        <h3 data-toggle="containers-body" onclick="toggleSection('containers-body')">
+            <i class="fas fa-folder"></i> List Containers
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="containers-body">
+            <div class="command-container">
+                <div class="cmd-label">PowerShell</div>
+                <div class="description"><strong>Direct API request</strong> â€” build headers and list the containers in the account:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$headers = @{
+    Authorization  = &quot;Bearer $storageToken&quot;
+    &quot;x-ms-version&quot; = &quot;2023-01-03&quot;
+}
+$accountName = &quot;{ACCOUNT}&quot;
+$uri = &quot;https://$accountName.blob.core.windows.net/?comp=list&quot;
+Invoke-RestMethod -Method GET -Uri $uri -Headers $headers"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">cURL</div>
+                <div class="description"><strong>Same via curl</strong> (Blob API returns XML, so <code>xmllint</code> instead of <code>jq</code>):</div>
+                <div class="command-box">
+                    <span class="command" data-base='accountName="{ACCOUNT}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="curl -s -X GET &quot;https://${accountName}.blob.core.windows.net/?comp=list&quot; -H &quot;Authorization: Bearer $storageToken&quot; -H &quot;x-ms-version: 2023-01-03&quot; | xmllint --format -"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• LIST BLOBS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="blobs">
+        <h3 data-toggle="blobs-body" onclick="toggleSection('blobs-body')">
+            <i class="fas fa-folder-open"></i> List Blobs
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="blobs-body">
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="containerInput"><i class="fas fa-folder-open"></i> Container</label>
+                    <input type="text" id="containerInput" placeholder="peterfiles" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="cmd-label">PowerShell</div>
+                <div class="description"><strong>List the blobs</strong> in a container (reuses <code>$headers</code> &amp; <code>$accountName</code>):</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$uri = &quot;https://$accountName.blob.core.windows.net/{CONTAINER}?restype=container&amp;comp=list&quot;
+Invoke-RestMethod -Method GET -Uri $uri -Headers $headers"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">cURL</div>
+                <div class="description"><strong>Same via curl</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="curl -s -X GET &quot;https://${accountName}.blob.core.windows.net/{CONTAINER}?restype=container&amp;comp=list&quot; -H &quot;Authorization: Bearer $storageToken&quot; -H &quot;x-ms-version: 2023-01-03&quot; | xmllint --format -"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• READ BLOB â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section yellow" id="read">
+        <h3 data-toggle="read-body" onclick="toggleSection('read-body')">
+            <i class="fas fa-file-lines"></i> Read Blob
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="read-body">
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="blobInput"><i class="fas fa-file-lines"></i> Blob (file)</label>
+                    <input type="text" id="blobInput" placeholder="credentials.txt" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="cmd-label">PowerShell</div>
+                <div class="description"><strong>Fetch and print</strong> a blob's contents to the terminal:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$uri = &quot;https://$accountName.blob.core.windows.net/{CONTAINER}/{BLOB}&quot;
+Invoke-RestMethod -Method GET -Uri $uri -Headers $headers"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">cURL</div>
+                <div class="description"><strong>Same via curl</strong> (raw file contents):</div>
+                <div class="command-box">
+                    <span class="command" data-base="curl -s -X GET &quot;https://${accountName}.blob.core.windows.net/{CONTAINER}/{BLOB}&quot; -H &quot;Authorization: Bearer $storageToken&quot; -H &quot;x-ms-version: 2023-01-03&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• AZ CLI â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="az-cli">
+        <h3 data-toggle="az-cli-body" onclick="toggleSection('az-cli-body')">
+            <i class="fas fa-terminal"></i> AZ CLI
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="az-cli-body">
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="saNameInput"><i class="fas fa-database"></i> Storage Account Name</label>
+                    <input type="text" id="saNameInput" placeholder="configbackupfiles" oninput="azUpdate()">
+                    <label for="shareNameInput"><i class="fas fa-folder-open"></i> Share Name</label>
+                    <input type="text" id="shareNameInput" placeholder="myfileshare" oninput="azUpdate()">
+                    <label for="acctKeyInput"><i class="fas fa-key"></i> Account Key</label>
+                    <input type="text" id="acctKeyInput" placeholder="&lt;ACCOUNT-KEY&gt;" oninput="azUpdate()">
+                    <label for="filePathInput"><i class="fas fa-file"></i> File Path</label>
+                    <input type="text" id="filePathInput" placeholder=".cloudconsole/acc_laura.img" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="cmd-label">AZ CLI</div>
+
+                <div class="description"><strong>List all storage accounts</strong> in the subscription:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az storage account list --query &quot;[].{name:name, resourceGroup:resourceGroup, location:location, kind:kind}&quot; --output table"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Get storage account keys</strong> (needs higher privileges):</div>
+                <div class="command-box">
+                    <span class="command" data-base="az storage account keys list --account-name {SA_NAME} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List containers</strong> in a storage account:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az storage container list --account-name {SA_NAME} --auth-mode login --output table"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List files</strong> in a file share:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az storage file list \
+  --share-name {SHARE_NAME} \
+  --account-name {SA_NAME} \
+  --account-key {ACCT_KEY} \
+  --output table"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List files in a subdirectory</strong> within the share:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az storage file list \
+  --share-name {SHARE_NAME} \
+  --account-name {SA_NAME} \
+  --account-key {ACCT_KEY} \
+  --path {FILE_PATH} \
+  --output table"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Show file metadata</strong>:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az storage file show \
+  --share-name {SHARE_NAME} \
+  --account-name {SA_NAME} \
+  --account-key {ACCT_KEY} \
+  --path {FILE_PATH} \
+  --output json"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Download a file</strong> from the share:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az storage file download \
+  --share-name {SHARE_NAME} \
+  --account-name {SA_NAME} \
+  --account-key {ACCT_KEY} \
+  --path {FILE_PATH}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

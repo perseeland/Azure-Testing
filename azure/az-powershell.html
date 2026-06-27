@@ -1,0 +1,379 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AZ PowerShell</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Import-Module|Install-Module|Connect-AzAccount|Disconnect-AzAccount|Get-AzContext|Get-AzAccessToken|Get-AzResource|Get-AzRoleAssignment|Get-AzRoleDefinition|Get-AzADUser|Select-Object|Sort-Object|ForEach-Object|Format-Table|ConvertFrom-Json|ConvertTo-Json|IEX|iwr)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const tokRaw = azGet('tokenInput');
+            const oidRaw = azGet('oidInput');
+            const roleNameRaw = azGet('roleNameInput');
+            const tokSpan = azSpan(tokRaw, '<access-token>');
+            const oidSpan = azSpan(oidRaw, '{OBJECT_ID}');
+            const roleNameSpan = azSpan(roleNameRaw, 'Contributor');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{TOKEN}', () => tokSpan)
+                    .replaceAll('{OID}', () => oidSpan)
+                    .replaceAll('{ROLENAME}', () => roleNameSpan);
+            });
+            try {
+                localStorage.setItem('az_token', tokRaw);
+                localStorage.setItem('az_oid', oidRaw);
+                localStorage.setItem('az_rolename', roleNameRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = { tokenInput: 'az_token', oidInput: 'az_oid', roleNameInput: 'az_rolename' };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#connect-token">Connect with Access Token</a></li>
+        <li><a href="#get-token">Get Access Token</a></li>
+        <li><a href="#list-resources">List Resources</a></li>
+        <li><a href="#role-assignments">Role Assignments</a></li>
+        <li><a href="#role-definitions">Role Definitions</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">AZ PowerShell</h1>
+
+    <!-- â”€â”€ Token input â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="tokenInput">Access Token</label>
+                <input type="text" id="tokenInput" placeholder="eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiI..." oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• CONNECT WITH ACCESS TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="connect-token">
+        <h3 data-toggle="connect-token-body" onclick="toggleSection('connect-token-body')">
+            <i class="fas fa-terminal"></i> Connect with an Access Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="connect-token-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Import the Az module</strong> (or install it first if missing):
+                </div>
+                <div class="command-box">
+                    <span class="command">Import-Module Az</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command">Install-Module Az -Force -AllowClobber</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set your access token</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='$AccessToken = "{TOKEN}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Authenticate</strong> with the token:
+                </div>
+                <div class="command-box">
+                    <span class="command">Connect-AzAccount -AccessToken $AccessToken -AccountID "Anything"</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Log out</strong> when done:
+                </div>
+                <div class="command-box">
+                    <span class="command">Disconnect-AzAccount</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /connect-token-body -->
+    </div><!-- /connect-token -->
+
+    <!-- â•â• GET ACCESS TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="get-token">
+        <h3 data-toggle="get-token-body" onclick="toggleSection('get-token-body')">
+            <i class="fas fa-key"></i> Get Access Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="get-token-body">
+
+            <div class="command-container">
+                <div class="description"><strong>ARM token</strong> (default resource) from the current session:</div>
+                <div class="command-box">
+                    <span class="command">(Get-AzAccessToken).Token</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Management (ARM) token</strong>:</div>
+                <div class="command-box">
+                    <span class="command">(Get-AzAccessToken -ResourceUrl "https://management.azure.com/").Token</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Microsoft Graph token</strong>:</div>
+                <div class="command-box">
+                    <span class="command">(Get-AzAccessToken -ResourceUrl "https://graph.microsoft.com/").Token</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /get-token-body -->
+    </div><!-- /get-token -->
+
+    <!-- â•â• LIST RESOURCES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="list-resources">
+        <h3 data-toggle="list-resources-body" onclick="toggleSection('list-resources-body')">
+            <i class="fas fa-cubes"></i> List Resources
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="list-resources-body">
+
+            <div class="command-container">
+                <div class="description">
+                    <strong>Enumerate resources</strong> (group, type, name, tags) sorted by type:
+                </div>
+                <div class="command-box">
+                    <span class="command">Get-AzResource | Select-Object ResourceGroupName,ResourceType,Name,Tags | Sort-Object ResourceType</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description" style="margin-top: 14px;">
+                    <strong>Detailed table</strong> â€” tags flattened to <code>key=value</code> pairs:
+                </div>
+                <div class="command-box">
+                    <span class="command">Get-AzResource | Select-Object ResourceGroupName, ResourceType, Name, @{N='Tags'; E={ if ($_.Tags) { ($_.Tags.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join '; ' } else { '' } }} | Sort-Object ResourceGroupName, ResourceType, Name | Format-Table -AutoSize</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description" style="margin-top: 14px;">
+                    <strong>Grouped by resource group</strong> (<code>-GroupBy</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command">Get-AzResource | Select-Object ResourceGroupName, ResourceType, Name, @{N='Tags'; E={ if ($_.Tags) { ($_.Tags.GetEnumerator() | ForEach-Object { "$($_.Key)=$($_.Value)" }) -join '; ' } else { '' } }} | Sort-Object ResourceGroupName, ResourceType | Format-Table -AutoSize -GroupBy ResourceGroupName</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /list-resources-body -->
+    </div><!-- /list-resources -->
+
+    <!-- â•â• ROLE ASSIGNMENTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="role-assignments">
+        <h3 data-toggle="role-assignments-body" onclick="toggleSection('role-assignments-body')">
+            <i class="fas fa-user-tag"></i> Role Assignments
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="role-assignments-body">
+
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span>The <strong>Object ID (OID)</strong> is the <code>oid</code> claim inside your access token. Quickest way: decode the JWT (paste it at <strong>jwt.ms</strong> and read <code>oid</code>), or pull it from the token with the command below.</span>
+            </div>
+
+            <div class="command-container">
+
+                <div class="description" style="margin-top: 14px;">
+                    <strong>Pull <code>oid</code> straight from the token</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command">$p = $AccessToken.Split('.')[1].Replace('-','+').Replace('_','/'); while ($p.Length % 4) { $p += '=' }; ([System.Text.Encoding]::UTF8.GetString([Convert]::FromBase64String($p)) | ConvertFrom-Json).oid</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="oidInput"><i class="fas fa-id-badge"></i> Object ID</label>
+                    <input type="text" id="oidInput" placeholder="{OBJECT_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>List role assignments</strong> for the object ID:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzRoleAssignment -ObjectId "{OID}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>As a table</strong> (role, scope, principal):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzRoleAssignment -ObjectId "{OID}" | Format-Table RoleDefinitionName,DisplayName,Scope -AutoSize'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Detailed table</strong> â€” scope level, resource group, type and name:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzRoleAssignment -ObjectId &quot;{OID}&quot; | Select-Object RoleDefinitionName, @{N='Level'; E={ if ($_.Scope -match '/providers/') { 'Resource' } elseif ($_.Scope -match '/resourceGroups/') { 'ResourceGroup' } else { 'Subscription' } }}, @{N='ResourceGroup'; E={ if ($_.Scope -match '/resourceGroups/([^/]+)') { $Matches[1] } }}, @{N='ResourceType'; E={ if ($_.Scope -match '/providers/([^/]+/[^/]+)/[^/]+$') { $Matches[1] } }}, @{N='Name'; E={ ($_.Scope -split '/')[-1] }} | Sort-Object ResourceGroup, Level, Name | Format-Table -AutoSize"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /role-assignments-body -->
+    </div><!-- /role-assignments -->
+
+    <!-- â•â• ROLE DEFINITIONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section yellow" id="role-definitions">
+        <h3 data-toggle="role-definitions-body" onclick="toggleSection('role-definitions-body')">
+            <i class="fas fa-scroll"></i> Role Definitions
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="role-definitions-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="roleNameInput"><i class="fas fa-tag"></i> Role Name</label>
+                    <input type="text" id="roleNameInput" placeholder="Contributor" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get full details</strong> of a role definition by name:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='Get-AzRoleDefinition -Name "{ROLENAME}" | ConvertTo-Json -Depth 6'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /role-definitions-body -->
+    </div><!-- /role-definitions -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

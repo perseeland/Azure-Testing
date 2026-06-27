@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>roadtx</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(roadtx|git|python3)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const rtRaw = azGet('refreshTokenInput');
+            const rtSpan = azSpan(rtRaw, '{REFRESH_TOKEN_SNIPPET}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{REFRESHTOKEN}', () => rtSpan);
+            });
+            try { localStorage.setItem('az_roadtx_rt', rtRaw); } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const t = localStorage.getItem('az_roadtx_rt') || '';
+                if (t) document.getElementById('refreshTokenInput').value = t;
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#exchange">Refresh Token → Access Token</a></li>
+        <li><a href="#reference">Resources &amp; Clients</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">roadtx</h1>
+    <p class="page-subtitle"><strong>roadtx</strong> (ROADtools Token eXchange) authenticates to Entra ID and requests/exchanges tokens — e.g. trading a refresh token for access tokens scoped to different clients and resources.</p>
+
+    <!-- ── Inputs ───────────────────────────────────────────── -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="refreshTokenInput">Refresh Token</label>
+                <input type="text" id="refreshTokenInput" placeholder="1.AU4A...&lt;SNIPPED&gt;" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- ══ REFRESH TOKEN → ACCESS TOKEN ══════════════════════ -->
+    <div class="topic-section red" id="exchange">
+        <h3 data-toggle="exchange-body" onclick="toggleSection('exchange-body')">
+            <i class="fas fa-right-left"></i> Refresh Token → Access Token
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="exchange-body">
+
+            <div class="command-container">
+                <div class="description"><strong>Set the refresh token</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="refreshToken={REFRESHTOKEN}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Exchange it</strong> for an ARM access token (client = Azure CLI) and print to stdout:</div>
+                <div class="command-box">
+                    <span class="command">roadtx auth --refresh-token "$refreshToken" -c "04b07795-8ddb-461a-bbee-02f9e1bf7b46" -r "https://management.core.windows.net/" --tokens-stdout</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /exchange-body -->
+    </div><!-- /exchange -->
+
+    <!-- ══ RESOURCES & CLIENTS ═══════════════════════════════ -->
+    <div class="topic-section green" id="reference">
+        <h3 data-toggle="reference-body" onclick="toggleSection('reference-body')">
+            <i class="fas fa-list"></i> Resources &amp; Clients
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="reference-body">
+
+            <div class="description"><strong>Resources</strong> (<code>-r</code>) — what API the token is valid for (roadtx also accepts the short alias):</div>
+            <div class="artifact-table">
+                <div class="artifact-row artifact-header" style="grid-template-columns: 200px 130px 1fr;">
+                    <span>Resource</span><span>Alias</span><span>Audience URL</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Microsoft Graph</span><span class="artifact-desc">msgraph</span><span class="artifact-path">https://graph.microsoft.com</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Azure AD Graph (legacy)</span><span class="artifact-desc">aadgraph</span><span class="artifact-path">https://graph.windows.net</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Azure RM (ARM)</span><span class="artifact-desc">azrm</span><span class="artifact-path">https://management.core.windows.net/</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Key Vault</span><span class="artifact-desc">—</span><span class="artifact-path">https://vault.azure.net</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Storage</span><span class="artifact-desc">—</span><span class="artifact-path">https://storage.azure.com/</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Azure SQL</span><span class="artifact-desc">—</span><span class="artifact-path">https://database.windows.net/</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Dataverse / Dynamics</span><span class="artifact-desc">—</span><span class="artifact-path">https://&lt;org&gt;.api.crm*.dynamics.com/</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">SharePoint / OneDrive</span><span class="artifact-desc">—</span><span class="artifact-path">https://&lt;tenant&gt;.sharepoint.com/</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Exchange Online</span><span class="artifact-desc">—</span><span class="artifact-path">https://outlook.office365.com</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Power BI</span><span class="artifact-desc">—</span><span class="artifact-path">https://analysis.windows.net/powerbi/api</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 200px 130px 1fr;">
+                    <span class="artifact-name">Device registration</span><span class="artifact-desc">devicereg</span><span class="artifact-path">urn:ms-drs:enterpriseregistration.windows.net</span>
+                </div>
+            </div>
+
+            <div class="description" style="margin-top: 16px;"><strong>FOCI clients</strong> (<code>-c</code>) — a single refresh token can be redeemed for any of these first-party apps:</div>
+            <div class="artifact-table">
+                <div class="artifact-row artifact-header" style="grid-template-columns: 260px 1fr;">
+                    <span>Client</span><span>Client ID</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 260px 1fr;">
+                    <span class="artifact-name">Azure CLI</span><span class="artifact-path">04b07795-8ddb-461a-bbee-02f9e1bf7b46</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 260px 1fr;">
+                    <span class="artifact-name">Azure PowerShell</span><span class="artifact-path">1950a258-227b-4e31-a9cf-717495945fc2</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 260px 1fr;">
+                    <span class="artifact-name">Microsoft Office</span><span class="artifact-path">d3590ed6-52b3-4102-aeff-aad2292ab01c</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 260px 1fr;">
+                    <span class="artifact-name">Microsoft Teams</span><span class="artifact-path">1fec8e78-bce4-4aaf-ab1b-5451cc387264</span>
+                </div>
+            </div>
+
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span>roadtx also supports more than refresh-token auth — <strong>device code</strong>, <strong>username/password (ROPC)</strong>, <strong>interactive</strong> (Selenium), <strong>PRT</strong>, and <strong>certificate/SAML</strong> flows.</span>
+            </div>
+
+        </div><!-- /reference-body -->
+    </div><!-- /reference -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

@@ -1,0 +1,498 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Internal (Resource) Recon</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Multi-line command rendering */
+        .command-box.multi { align-items: flex-start; }
+        .command.multi {
+            white-space: pre-wrap;
+            word-break: normal;
+            overflow-wrap: anywhere;
+        }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            // shell variables: $name / ${name}
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            // commands / tools
+            s = s.replace(/\b(curl|jq|xmllint|echo|for|do|done|cat|sed|awk|grep|git|python3|rm|cd|Invoke-RestMethod|Bearer|Authorization|Content-Type)\b/g, '<span class="tok-key">$1</span>');
+            // azure resource path keywords
+            s = s.replace(/\b(subscriptions|resourceGroups|providers|storageAccounts|blobServices|containers|blobs|resources)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azUpdate() {
+            const userRaw = azGet('usernameInput');
+            const passRaw = azGet('passwordInput');
+            const rgRaw   = azGet('rgInput');
+            const acctRaw = azGet('accountInput');
+            const contRaw = azGet('containerInput');
+            const tokenRaw = azGet('apiTokenInput');
+            const subIdRaw = azGet('subscriptionIdInput');
+            const userSpan = azSpan(userRaw, '{USERNAME3@COMPANY.com}');
+            const passSpan = azSpan(passRaw, '{PASSWORD_PLACEHOLDER}');
+            const rgSpan   = azSpan(rgRaw,   'mbt-rg-11');
+            const acctSpan = azSpan(acctRaw, 'mbtresearch');
+            const contSpan = azSpan(contRaw, 'research-files');
+            const tokenSpan = azSpan(tokenRaw, '<token>');
+            const subIdSpan = azSpan(subIdRaw, '<subscriptionId>');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan)
+                    .replaceAll('{RG}', () => rgSpan)
+                    .replaceAll('{ACCOUNT}', () => acctSpan)
+                    .replaceAll('{CONTAINER}', () => contSpan)
+                    .replaceAll('{TOKEN}', () => tokenSpan)
+                    .replaceAll('{SUBID}', () => subIdSpan);
+            });
+            try {
+                localStorage.setItem('az_username', userRaw);
+                localStorage.setItem('az_password', passRaw);
+                localStorage.setItem('az_rg', rgRaw);
+                localStorage.setItem('az_account', acctRaw);
+                localStorage.setItem('az_container', contRaw);
+                localStorage.setItem('az_api_token', tokenRaw);
+                localStorage.setItem('az_subscription_id', subIdRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    usernameInput: 'az_username', passwordInput: 'az_password',
+                    rgInput: 'az_rg', accountInput: 'az_account',
+                    containerInput: 'az_container', apiTokenInput: 'az_api_token',
+                    subscriptionIdInput: 'az_subscription_id'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#arm-token">Get an ARM Token</a></li>
+        <li><a href="#subscription-id">Identify &amp; Set Subscription ID</a></li>
+        <li><a href="#resources">Identify Resources</a></li>
+        <li><a href="#api-resources">Enumerating Resources via Direct API Call</a></li>
+        <li><a href="#storage-accounts">List Storage Accounts</a></li>
+        <li><a href="#storage-containers">Identify Containers</a></li>
+        <li><a href="#blob-files-arm">List Blob Files (ARM)</a></li>
+        <li><a href="#storage-token">Get a Storage Token</a></li>
+        <li><a href="#blob-files-storage">List Blob Files (Storage API)</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Internal (Resource) Recon</h1>
+
+    <!-- â•â• GET AN ARM TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="arm-token">
+        <h3 data-toggle="arm-token-body" onclick="toggleSection('arm-token-body')">
+            <i class="fas fa-key"></i> Get an Azure Resource Manager Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="arm-token-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="usernameInput"><i class="fas fa-user"></i> Username</label>
+                    <input type="text" id="usernameInput" placeholder="{USERNAME3@COMPANY.com}" oninput="azUpdate()">
+                    <label for="passwordInput"><i class="fas fa-lock"></i> Password</label>
+                    <input type="text" id="passwordInput" placeholder="{PASSWORD_PLACEHOLDER}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Request an ARM access token</strong> (ROPC password grant, scoped to <code>management.azure.com</code>):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="ARMAccessToken=$(curl -s -X POST \
+  &quot;https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token&quot; \
+  -H &quot;Content-Type: application/x-www-form-urlencoded&quot; \
+  -d &quot;grant_type=password&quot; \
+  -d &quot;client_id=d3590ed6-52b3-4102-aeff-aad2292ab01c&quot; \
+  -d &quot;username={USERNAME}&quot; \
+  -d 'password={PASSWORD}' \
+  -d &quot;scope=https://management.azure.com/.default%20offline_access&quot; | jq -r &quot;.access_token&quot;)"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /arm-token-body -->
+    </div><!-- /arm-token -->
+
+    <!-- â•â• SUBSCRIPTION ID â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="subscription-id">
+        <h3 data-toggle="subscription-id-body" onclick="toggleSection('subscription-id-body')">
+            <i class="fas fa-id-card"></i> Identify and Set the Subscription ID
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="subscription-id-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List subscriptions</strong> with the ARM token and capture the subscription ID:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi">SubscriptionID=$(curl -s -X GET \
+  "https://management.azure.com/subscriptions?api-version=2025-04-01" \
+  -H "Authorization: Bearer $ARMAccessToken" \
+  -H "Content-Type: application/json" \
+  | jq -r '.value[].subscriptionId') && echo $SubscriptionID</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /subscription-id-body -->
+    </div><!-- /subscription-id -->
+
+    <!-- â•â• IDENTIFY RESOURCES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="resources">
+        <h3 data-toggle="resources-body" onclick="toggleSection('resources-body')">
+            <i class="fas fa-cubes"></i> Identify Resources
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="resources-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List resources</strong> in the subscription (type and name):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi">curl -s -X GET \
+  "https://management.azure.com/subscriptions/$SubscriptionID/resources?api-version=2021-04-01" \
+  -H "Authorization: Bearer $ARMAccessToken" \
+  -H "Content-Type: application/json" \
+  | jq -r '.value[] | {Type: .type, Name: .name}'</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Show the resource group</strong> for each resource (the RG is the 4th segment of the resource <code>id</code>):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi">curl -s -X GET \
+  "https://management.azure.com/subscriptions/$SubscriptionID/resources?api-version=2021-04-01" \
+  -H "Authorization: Bearer $ARMAccessToken" \
+  -H "Content-Type: application/json" \
+  | jq -r '.value[] | {Name: .name, Type: .type, RG: (.id | split("/")[4])}'</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /resources-body -->
+    </div><!-- /resources -->
+
+    <!-- â•â• ENUMERATING RESOURCES VIA DIRECT API CALL â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section cyan" id="api-resources">
+        <h3 data-toggle="api-resources-body" onclick="toggleSection('api-resources-body')">
+            <i class="fas fa-code"></i> Enumerating Resources via Direct API Call
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="api-resources-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="apiTokenInput"><i class="fas fa-key"></i> Access Token</label>
+                    <input type="text" id="apiTokenInput" placeholder="&lt;token&gt;" oninput="azUpdate()">
+                    <label for="subscriptionIdInput"><i class="fas fa-id-card"></i> Subscription ID</label>
+                    <input type="text" id="subscriptionIdInput" placeholder="&lt;subscriptionId&gt;" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>List all resources</strong> in the subscription via PowerShell REST API call:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$AccessToken = &quot;{TOKEN}&quot;
+$SubscriptionId = '{SUBID}'
+$ResourceUrl = &quot;https://management.azure.com/subscriptions/$SubscriptionId/resources&quot;
+$headers = @{
+    'Authorization' = &quot;Bearer $AccessToken&quot;
+    'Content-Type' = 'application/json'
+}
+$response = Invoke-RestMethod -Uri &quot;$ResourceUrl}?api-version=2020-06-01&quot; -Method Get -Headers $headers
+$response.value"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• STORAGE ACCOUNTS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="storage-accounts">
+        <h3 data-toggle="storage-accounts-body" onclick="toggleSection('storage-accounts-body')">
+            <i class="fas fa-database"></i> List Accessible Storage Accounts
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="storage-accounts-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List storage accounts</strong> in the subscription:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi">curl -s -X GET \
+  "https://management.azure.com/subscriptions/$SubscriptionID/providers/Microsoft.Storage/storageAccounts?api-version=2023-01-01" \
+  -H "Authorization: Bearer $ARMAccessToken" \
+  -H "Content-Type: application/json" \
+  | jq -r '.value[].name'</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /storage-accounts-body -->
+    </div><!-- /storage-accounts -->
+
+    <!-- â•â• STORAGE CONTAINERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section yellow" id="storage-containers">
+        <h3 data-toggle="storage-containers-body" onclick="toggleSection('storage-containers-body')">
+            <i class="fas fa-box-open"></i> Identify Containers in the Storage Account
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="storage-containers-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="rgInput"><i class="fas fa-layer-group"></i> Resource Group</label>
+                    <input type="text" id="rgInput" placeholder="mbt-rg-11" oninput="azUpdate()">
+                    <label for="accountInput"><i class="fas fa-database"></i> Storage Account</label>
+                    <input type="text" id="accountInput" placeholder="mbtresearch" oninput="azUpdate()">
+                    <label for="containerInput"><i class="fas fa-box-open"></i> Container</label>
+                    <input type="text" id="containerInput" placeholder="research-files" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <span class="user-bar-hint">These values feed the blob commands below too.</span>
+
+                <div class="description">
+                    <strong>List blob containers</strong> in a storage account (swap in the resource group and account name):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET \
+  &quot;https://management.azure.com/subscriptions/$SubscriptionID/resourceGroups/{RG}/providers/Microsoft.Storage/storageAccounts/{ACCOUNT}/blobServices/default/containers?api-version=2023-01-01&quot; \
+  -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+  -H &quot;Content-Type: application/json&quot; \
+  | jq -r '.value[].name'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /storage-containers-body -->
+    </div><!-- /storage-containers -->
+
+    <!-- â•â• LIST BLOB FILES (ARM) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section mauve" id="blob-files-arm">
+        <h3 data-toggle="blob-files-arm-body" onclick="toggleSection('blob-files-arm-body')">
+            <i class="fas fa-file-lines"></i> List Files from Azure Blob Storage (ARM API)
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="blob-files-arm-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List blobs</strong> in a container via the management API (uses the inputs above):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET \
+  &quot;https://management.azure.com/subscriptions/$SubscriptionID/resourceGroups/{RG}/providers/Microsoft.Storage/storageAccounts/{ACCOUNT}/blobServices/default/containers/{CONTAINER}/blobs?api-version=2023-01-01&quot; \
+  -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+  -H &quot;Content-Type: application/json&quot; | jq"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="note-box warn">
+                    <i class="fas fa-triangle-exclamation"></i>
+                    <span>ARM tokens are <strong>management-plane only</strong> â€” they enumerate containers but can't read blob contents. Use a <strong>storage-scoped token</strong> (below) for that.</span>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /blob-files-arm-body -->
+    </div><!-- /blob-files-arm -->
+
+    <!-- â•â• GET STORAGE TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="storage-token">
+        <h3 data-toggle="storage-token-body" onclick="toggleSection('storage-token-body')">
+            <i class="fas fa-key"></i> Get an Azure Storage Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="storage-token-body">
+
+            <div class="command-container">
+
+                <span class="user-bar-hint">Uses the Username / Password from the ARM token section above.</span>
+                <div class="description">
+                    <strong>Request a storage access token</strong> (ROPC password grant, scoped to <code>storage.azure.com</code>):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="StorageAccessToken=$(curl -s -X POST &quot;https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token&quot; \
+  -H &quot;Content-Type: application/x-www-form-urlencoded&quot; \
+  -d &quot;grant_type=password&quot; \
+  -d &quot;client_id=d3590ed6-52b3-4102-aeff-aad2292ab01c&quot; \
+  -d &quot;username={USERNAME}&quot; \
+  -d 'password={PASSWORD}' \
+  -d &quot;scope=https://storage.azure.com/.default%20offline_access&quot; | jq -r &quot;.access_token&quot;)"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /storage-token-body -->
+    </div><!-- /storage-token -->
+
+    <!-- â•â• LIST BLOB FILES (STORAGE API) â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="blob-files-storage">
+        <h3 data-toggle="blob-files-storage-body" onclick="toggleSection('blob-files-storage-body')">
+            <i class="fas fa-file-lines"></i> List Files from Azure Blob Storage (Storage API)
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="blob-files-storage-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List blobs</strong> directly against the blob endpoint with the storage token:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X GET \
+  &quot;https://{ACCOUNT}.blob.core.windows.net/{CONTAINER}?restype=container&amp;comp=list&quot; \
+  -H &quot;Authorization: Bearer $StorageAccessToken&quot; \
+  -H &quot;x-ms-version: 2025-07-05&quot; \
+  | xmllint --xpath &quot;//Blobs/Blob/Name/text()&quot; -"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /blob-files-storage-body -->
+    </div><!-- /blob-files-storage -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

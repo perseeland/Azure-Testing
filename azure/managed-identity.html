@@ -1,0 +1,349 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Managed Identity</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Connect-AzAccount|Connect-MgGraph|ConvertTo-SecureString|Get-MgContext|az|curl)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const miTokenRaw = azGet('miTokenInput');
+            const accountIdRaw = azGet('accountIdInput');
+            const mgTokenRaw = azGet('mgTokenInput');
+            const miTokenSpan = azSpan(miTokenRaw, '<YOUR-TOKEN>');
+            const accountIdSpan = azSpan(accountIdRaw, '{ACCOUNT_ID}');
+            const mgTokenSpan = azSpan(mgTokenRaw, '{JWT_TOKEN_SNIPPET}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{MITOKEN}', () => miTokenSpan)
+                    .replaceAll('{ACCOUNTID}', () => accountIdSpan)
+                    .replaceAll('{MGTOKEN}', () => mgTokenSpan);
+            });
+            try {
+                localStorage.setItem('az_mi_token', miTokenRaw);
+                localStorage.setItem('az_mi_accountid', accountIdRaw);
+                localStorage.setItem('az_mi_mgtoken', mgTokenRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    miTokenInput: 'az_mi_token', accountIdInput: 'az_mi_accountid',
+                    mgTokenInput: 'az_mi_mgtoken'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#discover">Discover &amp; Get Tokens</a></li>
+        <li><a href="#pivot">Pivot with AZ PowerShell</a></li>
+        <li><a href="#mg-graph-pivot">MG Graph</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Managed Identity</h1>
+
+    <!-- â•â• OVERVIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>What it is</strong> â€” an identity automatically managed by Microsoft Entra ID that can be assigned to an Azure resource (Container App, VM, App Service, Automation Account, etc.) so the resource's code can authenticate without storing credentials.</li>
+                <li><strong>System-assigned vs. user-assigned</strong> â€” system-assigned identities are tied 1:1 to a resource and deleted with it; user-assigned identities are standalone resources that can be shared across multiple resources.</li>
+                <li><strong>Local identity endpoint</strong> â€” when a managed identity is assigned, the resource's runtime exposes <code>IDENTITY_HEADER</code> / <code>IDENTITY_ENDPOINT</code> (or <code>MSI_ENDPOINT</code> / <code>MSI_SECRET</code> on older platforms) env vars, used to request tokens locally.</li>
+                <li><strong>Token = identity</strong> â€” any code (or shell) running on the resource can request a token for the identity for <strong>any resource URI</strong> (ARM, Microsoft Graph, Key Vault, Storage, etc.) it has been granted access to.</li>
+                <li><strong>Pivoting</strong> â€” a token for <code>https://management.azure.com</code> can be used with <code>Connect-AzAccount -AccessToken ... -AccountID ...</code> to operate as the identity in Az PowerShell, inheriting whatever RBAC roles it holds.</li>
+                <li><strong>Find the Account ID</strong> â€” the <strong>Account ID</strong> is the identity's <strong>principalId</strong>, visible on the resource (e.g. via <code>az resource show</code> / <code>Get-AzResource</code> â€” look for the <code>Identity</code> field).</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- â•â• DISCOVER & GET TOKENS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="discover">
+        <h3 data-toggle="discover-body" onclick="toggleSection('discover-body')">
+            <i class="fas fa-magnifying-glass"></i> Discover &amp; Get Tokens
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="discover-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Check for managed identity environment variables</strong> inside the shell:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="env | grep IDENTITY"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="note-box info">
+                    <i class="fas fa-circle-info"></i>
+                    <span>The presence of <strong>IDENTITY_HEADER</strong> and <strong>IDENTITY_ENDPOINT</strong> means that a <strong>managed identity</strong> is associated with the resource. (<a href="https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity" target="_blank">Ref.</a>)</span>
+                </div>
+
+                <div class="description">
+                    <strong>Get an ARM access token for the Managed Identity</strong> via the local identity endpoint:
+                </div>
+                <div class="cmd-label">cURL</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -H &quot;X-IDENTITY-HEADER: $IDENTITY_HEADER&quot; &quot;$IDENTITY_ENDPOINT?resource=https://management.azure.com&amp;api-version=2019-08-01&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">PowerShell</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$response = Invoke-RestMethod -Method Get -Uri &quot;$($env:IDENTITY_ENDPOINT)?resource=https://management.azure.com&amp;api-version=2019-08-01&quot; -Headers @{ &quot;X-IDENTITY-HEADER&quot; = $env:IDENTITY_HEADER }; $response.access_token"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get a Microsoft Graph access token for the Managed Identity</strong> via the local identity endpoint:
+                </div>
+                <div class="cmd-label">cURL</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -H &quot;X-IDENTITY-HEADER: $IDENTITY_HEADER&quot; &quot;$IDENTITY_ENDPOINT?resource=https://graph.microsoft.com&amp;api-version=2019-08-01&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">PowerShell</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$response = Invoke-RestMethod -Method Get -Uri &quot;$($env:IDENTITY_ENDPOINT)?resource=https://graph.microsoft.com&amp;api-version=2019-08-01&quot; -Headers @{ &quot;X-IDENTITY-HEADER&quot; = $env:IDENTITY_HEADER }; $response.access_token"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get a Key Vault access token for the Managed Identity</strong> via the local identity endpoint:
+                </div>
+                <div class="cmd-label">cURL</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -H &quot;X-IDENTITY-HEADER: $IDENTITY_HEADER&quot; &quot;$IDENTITY_ENDPOINT?resource=https://vault.azure.net&amp;api-version=2019-08-01&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">PowerShell</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$response = Invoke-RestMethod -Method Get -Uri &quot;$($env:IDENTITY_ENDPOINT)?resource=https://vault.azure.net&amp;api-version=2019-08-01&quot; -Headers @{ &quot;X-IDENTITY-HEADER&quot; = $env:IDENTITY_HEADER }; $response.access_token"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get a Storage access token for the Managed Identity</strong> via the local identity endpoint:
+                </div>
+                <div class="cmd-label">cURL</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -H &quot;X-IDENTITY-HEADER: $IDENTITY_HEADER&quot; &quot;$IDENTITY_ENDPOINT?resource=https://storage.azure.com&amp;api-version=2019-08-01&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="cmd-label">PowerShell</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$response = Invoke-RestMethod -Method Get -Uri &quot;$($env:IDENTITY_ENDPOINT)?resource=https://storage.azure.com&amp;api-version=2019-08-01&quot; -Headers @{ &quot;X-IDENTITY-HEADER&quot; = $env:IDENTITY_HEADER }; $response.access_token"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• PIVOT WITH POWERSHELL â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="pivot">
+        <h3 data-toggle="pivot-body" onclick="toggleSection('pivot-body')">
+            <i class="fas fa-right-left"></i> Pivot with AZ PowerShell
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="pivot-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="miTokenInput"><i class="fas fa-key"></i> Managed Identity Token</label>
+                    <input type="text" id="miTokenInput" placeholder="&lt;YOUR-TOKEN&gt;" oninput="azUpdate()">
+                    <label for="accountIdInput"><i class="fas fa-id-card"></i> Account ID</label>
+                    <input type="text" id="accountIdInput" placeholder="{ACCOUNT_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="note-box info">
+                    <i class="fas fa-circle-info"></i>
+                    <span>The <strong>Account ID</strong> is the identity's <strong>principalId</strong> â€” retrieve it from a resource listing (look for the <code>Identity</code> field).</span>
+                </div>
+
+                <div class="description">
+                    <strong>Set the token and account ID</strong> (Managed Identity Token):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="$accesstoken = &quot;{MITOKEN}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="$accountid = &quot;{ACCOUNTID}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Connect to Azure</strong> as the Managed Identity:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Connect-AzAccount -AccessToken $accesstoken -AccountID $accountid"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• MG GRAPH â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="mg-graph-pivot">
+        <h3 data-toggle="mg-graph-pivot-body" onclick="toggleSection('mg-graph-pivot-body')">
+            <i class="fas fa-diagram-project"></i> MG Graph
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="mg-graph-pivot-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="mgTokenInput"><i class="fas fa-key"></i> MG Graph Token</label>
+                    <input type="text" id="mgTokenInput" placeholder="{JWT_TOKEN_SNIPPET}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Connect to Microsoft Graph</strong> with the Managed Identity's token:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="Connect-MgGraph -AccessToken (ConvertTo-SecureString &quot;{MGTOKEN}&quot; -AsPlainText -Force)"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Confirm the connected context</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-MgContext"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

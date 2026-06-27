@@ -1,0 +1,553 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Container App</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Get-AzResource|Get-AzContainerApp|Select-Object|Sort-Object|Invoke-RestMethod|az|curl|jq)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const rgRaw   = azGet('rgInput');
+            const appRaw  = azGet('appInput');
+            const userRaw = azGet('usernameInput');
+            const passRaw = azGet('passwordInput');
+            const assigneeRaw = azGet('assigneeInput');
+            const roleDefIdRaw = azGet('roleDefIdInput');
+            const miTokenRaw = azGet('miTokenInput');
+            const accountIdRaw = azGet('accountIdInput');
+            const rgSpan   = azSpan(rgRaw,   'mbt-rg-15');
+            const appSpan  = azSpan(appRaw,  'mbt-containerapp');
+            const userSpan = azSpan(userRaw, '{USERNAME7@COMPANY.com}');
+            const passSpan = azSpan(passRaw, 'Rohit123');
+            const assigneeSpan = azSpan(assigneeRaw, '{ASSIGNEE_ID}');
+            const roleDefIdSpan = azSpan(roleDefIdRaw, '{ROLE_DEFINITION_ID}');
+            const miTokenSpan = azSpan(miTokenRaw, '<YOUR-TOKEN>');
+            const accountIdSpan = azSpan(accountIdRaw, '{ACCOUNT_ID}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{RG}', () => rgSpan)
+                    .replaceAll('{APP}', () => appSpan)
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan)
+                    .replaceAll('{ASSIGNEE}', () => assigneeSpan)
+                    .replaceAll('{ROLEDEFID}', () => roleDefIdSpan)
+                    .replaceAll('{MITOKEN}', () => miTokenSpan)
+                    .replaceAll('{ACCOUNTID}', () => accountIdSpan);
+            });
+            try {
+                localStorage.setItem('az_ca_rg', rgRaw);
+                localStorage.setItem('az_ca_app', appRaw);
+                localStorage.setItem('az_ca_user', userRaw);
+                localStorage.setItem('az_ca_pass', passRaw);
+                localStorage.setItem('az_ca_assignee', assigneeRaw);
+                localStorage.setItem('az_ca_roledefid', roleDefIdRaw);
+                localStorage.setItem('az_ca_mitoken', miTokenRaw);
+                localStorage.setItem('az_ca_accountid', accountIdRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    rgInput: 'az_ca_rg', appInput: 'az_ca_app',
+                    usernameInput: 'az_ca_user', passwordInput: 'az_ca_pass',
+                    assigneeInput: 'az_ca_assignee', roleDefIdInput: 'az_ca_roledefid',
+                    miTokenInput: 'az_ca_mitoken', accountIdInput: 'az_ca_accountid'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#authentication">Authentication</a></li>
+        <li><a href="#discover">Discover Resources</a></li>
+        <li><a href="#arm-rbac">ARM RBAC</a></li>
+        <li><a href="#secrets">Secrets &amp; Config</a></li>
+        <li><a href="#exec">Command Execution</a></li>
+        <li><a href="#managed-identities">Managed Identities</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Container App</h1>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="usernameInput">Username</label>
+                <input type="text" id="usernameInput" placeholder="{USERNAME7@COMPANY.com}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="passwordInput">Password</label>
+                <input type="text" id="passwordInput" placeholder="Rohit123" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• OVERVIEW â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>Azure Container Apps</strong> â€” a serverless container hosting platform built on Kubernetes/KEDA. Each app runs one or more containers (a "revision") and can scale to zero.</li>
+                <li><strong>Secrets &amp; env vars</strong> â€” connection strings, API keys, and DB credentials are often stored as <strong>Container App secrets</strong> or plain <strong>environment variables</strong> on the container template.</li>
+                <li><strong>Managed identity</strong> â€” if assigned, the app's containers get <code>IDENTITY_HEADER</code> / <code>IDENTITY_ENDPOINT</code> env vars, letting any code (or shell) running inside fetch tokens for the identity without credentials.</li>
+                <li><strong>ARM RBAC</strong> â€” role assignments on the Container App (or its resource group/subscription) determine what an attacker can read/modify via the management plane (e.g. <code>listSecrets</code>).</li>
+                <li><strong>Command execution</strong> â€” <code>az containerapp exec</code> gives an interactive shell in a running revision, useful for dumping env vars, reading mounted files, and pivoting via the managed identity.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- â•â• AUTHENTICATION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="authentication">
+        <h3 data-toggle="authentication-body" onclick="toggleSection('authentication-body')">
+            <i class="fas fa-key"></i> Authentication
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="authentication-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Get an ARM access token</strong> via ROPC (resource owner password credentials):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="ARMAccessToken=$(curl -s -X POST \
+&quot;https://login.microsoftonline.com/{TENANT_ID}/oauth2/v2.0/token&quot; \
+-H &quot;Content-Type: application/x-www-form-urlencoded&quot; \
+-d &quot;grant_type=password&quot; \
+-d &quot;client_id=d3590ed6-52b3-4102-aeff-aad2292ab01c&quot; \
+-d &quot;username={USERNAME}&quot; \
+-d &quot;password={PASSWORD}&quot; \
+-d &quot;scope=https://management.azure.com/.default%20offline_access&quot; | jq -r &quot;.access_token&quot;)"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get subscription ID</strong>:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="SubscriptionID=$(curl -s -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+-H &quot;Content-Type: application/json&quot; \
+&quot;https://management.azure.com/subscriptions?api-version=2020-01-01&quot; \
+| jq -r '.value[].subscriptionId') &amp;&amp; echo $SubscriptionID"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• DISCOVER RESOURCES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="discover">
+        <h3 data-toggle="discover-body" onclick="toggleSection('discover-body')">
+            <i class="fas fa-magnifying-glass"></i> Discover Resources
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="discover-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List resources</strong> in the subscription (name, type, resource group, identity):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+-H &quot;Content-Type: application/json&quot; \
+&quot;https://management.azure.com/subscriptions/$SubscriptionID/resources?api-version=2021-04-01&quot; \
+| jq -r '.value[] | {Name: .name, Type: .type, ResourceGroup: (.id | capture(&quot;/resourceGroups/(?&lt;rg&gt;[^/]+)/&quot;).rg), Identity: .identity}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• ARM RBAC â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="arm-rbac">
+        <h3 data-toggle="arm-rbac-body" onclick="toggleSection('arm-rbac-body')">
+            <i class="fas fa-user-shield"></i> ARM RBAC
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="arm-rbac-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List resources</strong> with their resource ID (for RBAC lookups):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+-H &quot;Content-Type: application/json&quot; \
+&quot;https://management.azure.com/subscriptions/$SubscriptionID/resources?api-version=2021-04-01&quot; \
+| jq -r '.value[] | {Name: .name, Type: .type, ResourceGroup: (.id | capture(&quot;/resourceGroups/(?&lt;rg&gt;[^/]+)/&quot;).rg), Identity: .identity, ID: .id}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="rgInput"><i class="fas fa-folder"></i> Resource Group</label>
+                    <input type="text" id="rgInput" placeholder="mbt-rg-15" oninput="azUpdate()">
+                    <label for="appInput"><i class="fas fa-cube"></i> Container App</label>
+                    <input type="text" id="appInput" placeholder="mbt-containerapp" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set the resource ID</strong> of the target Container App:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="Id=&quot;/subscriptions/$SubscriptionID/resourceGroups/{RG}/providers/Microsoft.App/containerApps/{APP}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get the object ID (OID)</strong> of the current principal via roadtx:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="roadtx describe -t $ARMAccessToken | jq -r &quot;.oid&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="assigneeInput"><i class="fas fa-user"></i> Assignee</label>
+                    <input type="text" id="assigneeInput" placeholder="{ASSIGNEE_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set the assignee</strong> (principal object ID to check role assignments for):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Assignee=&quot;{ASSIGNEE}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Check role assignments</strong> for the assignee scoped to the resource:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -G \
+-H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+-H &quot;Content-Type: application/json&quot; \
+--data-urlencode &quot;\$filter=assignedTo('$Assignee')&quot; \
+&quot;https://management.azure.com$Id/providers/Microsoft.Authorization/roleAssignments?api-version=2022-04-01&quot; \
+| jq -r '.value[] | [.properties.roleDefinitionId, .properties.scope]'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="roleDefIdInput"><i class="fas fa-id-badge"></i> Role Definition ID</label>
+                    <input type="text" id="roleDefIdInput" placeholder="{ROLE_DEFINITION_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set the role definition ID</strong> (from the previous output):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="RoleDefinitionId=&quot;{ROLEDEFID}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Resolve the role definition</strong> to its name, description and permissions:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+&quot;https://management.azure.com/subscriptions/${SubscriptionID}/providers/Microsoft.Authorization/roleDefinitions/${RoleDefinitionId}?api-version=2022-04-01&quot; \
+| jq '{roleName: .properties.roleName, description: .properties.description, permissions: .properties.permissions}'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• SECRETS & CONFIG â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="secrets">
+        <h3 data-toggle="secrets-body" onclick="toggleSection('secrets-body')">
+            <i class="fas fa-lock"></i> Secrets &amp; Config
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="secrets-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>List secret names</strong> referenced in the Container App configuration:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -H &quot;Authorization: Bearer $ARMAccessToken&quot; -H &quot;Content-Type: application/json&quot; &quot;https://management.azure.com${Id}?api-version=2023-05-01&quot; \
+| jq -r &quot;.properties.configuration.secrets&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>List secret values</strong> via the <code>listSecrets</code> action:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -X POST -H &quot;Authorization: Bearer $ARMAccessToken&quot; -H &quot;Content-Type: application/json&quot; -d '{}' &quot;https://management.azure.com$Id/listSecrets?api-version=2023-05-01&quot; | jq -r '.value'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Show environment variables</strong> for the first container in the revision template:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -s -H &quot;Authorization: Bearer $ARMAccessToken&quot; \
+    -H &quot;Content-Type: application/json&quot; \
+    &quot;https://management.azure.com$Id?api-version=2023-05-01&quot; \
+| jq '.properties.template.containers[0].env'"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• COMMAND EXECUTION â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section yellow" id="exec">
+        <h3 data-toggle="exec-body" onclick="toggleSection('exec-body')">
+            <i class="fas fa-terminal"></i> Command Execution
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="exec-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Sign in</strong> with the AZ CLI using a device code:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="az login --use-device-code"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Show the Container App's managed identity</strong> (reuses the Resource Group / Container App values set above):
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az containerapp identity show \
+  --name {APP} \
+  --resource-group {RG} \
+  -o jsonc"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get an interactive shell</strong> in the running Container App (reuses the Resource Group / Container App values set above):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="az containerapp exec --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- â•â• MANAGED IDENTITIES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section mauve" id="managed-identities">
+        <h3 data-toggle="managed-identities-body" onclick="toggleSection('managed-identities-body')">
+            <i class="fas fa-id-card"></i> Managed Identities
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="managed-identities-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>Check for managed identity environment variables</strong> inside the shell:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="env | grep IDENTITY"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="note-box info">
+                    <i class="fas fa-circle-info"></i>
+                    <span>The presence of <strong>IDENTITY_HEADER</strong> and <strong>IDENTITY_ENDPOINT</strong> mean that a <strong>managed identity</strong> is associated with the Container App. (<a href="https://learn.microsoft.com/en-us/azure/app-service/overview-managed-identity" target="_blank">Ref.</a>)</span>
+                </div>
+
+                <div class="description">
+                    <strong>Get an ARM access token for the Managed Identity</strong> via the local identity endpoint:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -H &quot;X-IDENTITY-HEADER: $IDENTITY_HEADER&quot; &quot;$IDENTITY_ENDPOINT?resource=https://management.azure.com&amp;api-version=2019-08-01&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Get a Microsoft Graph access token for the Managed Identity</strong> via the local identity endpoint:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="curl -H &quot;X-IDENTITY-HEADER: $IDENTITY_HEADER&quot; &quot;$IDENTITY_ENDPOINT?resource=https://graph.microsoft.com&amp;api-version=2019-08-01&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="miTokenInput"><i class="fas fa-key"></i> Managed Identity Token</label>
+                    <input type="text" id="miTokenInput" placeholder="&lt;YOUR-TOKEN&gt;" oninput="azUpdate()">
+                    <label for="accountIdInput"><i class="fas fa-id-card"></i> Account ID</label>
+                    <input type="text" id="accountIdInput" placeholder="{ACCOUNT_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="note-box info">
+                    <i class="fas fa-circle-info"></i>
+                    <span>The <strong>Account ID</strong> is the identity's <strong>principalId</strong> â€” retrieve it from the <a href="#discover">Discover Resources</a> section's resource listing (look for the <code>Identity</code> field).</span>
+                </div>
+
+                <div class="description">
+                    <strong>Set the token and account ID</strong> (Managed Identity Token):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="$accesstoken = &quot;{MITOKEN}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="$accountid = &quot;{ACCOUNTID}&quot;"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Connect to Azure</strong> as the Managed Identity:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="Connect-AzAccount -AccessToken $accesstoken -AccountID $accountid"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

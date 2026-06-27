@@ -1,0 +1,242 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tokens</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(findmeaccess)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        function azUpdate() {
+            const userRaw = azGet('usernameInput');
+            const passRaw = azGet('passwordInput');
+            const userSpan = azSpan(userRaw, '{USERNAME2@COMPANY.com}');
+            const passSpan = azSpan(passRaw, '{PASSWORD_PLACEHOLDER3}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{USERNAME}', () => userSpan)
+                    .replaceAll('{PASSWORD}', () => passSpan);
+            });
+            try {
+                localStorage.setItem('az_username', userRaw);
+                localStorage.setItem('az_password', passRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const u = localStorage.getItem('az_username') || '';
+                const p = localStorage.getItem('az_password') || '';
+                if (u) document.getElementById('usernameInput').value = u;
+                if (p) document.getElementById('passwordInput').value = p;
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#get-tokens">Get Tokens</a></li>
+        <li><a href="#cache-locations">Token Cache Locations</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">Tokens</h1>
+
+    <!-- â”€â”€ Inputs â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+    <div class="var-bar">
+        <div class="var-grid">
+            <div class="var-field">
+                <label for="usernameInput">User Email</label>
+                <input type="text" id="usernameInput" placeholder="{USERNAME2@COMPANY.com}" oninput="azUpdate()">
+            </div>
+            <div class="var-field">
+                <label for="passwordInput">Password</label>
+                <input type="text" id="passwordInput" placeholder="{PASSWORD_PLACEHOLDER3}" oninput="azUpdate()">
+            </div>
+        </div>
+        <div class="bar-toolbar">
+            <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+        </div>
+    </div>
+
+    <!-- â•â• GET TOKENS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="get-tokens">
+        <h3 data-toggle="get-tokens-body" onclick="toggleSection('get-tokens-body')">
+            <i class="fas fa-key"></i> Get Tokens (FindMeAccess)
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="get-tokens-body">
+
+            <div class="command-container">
+
+                <div class="description">
+                    <strong>ARM token</strong> (resource <code>management.azure.com</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c d3590ed6-52b3-4102-aeff-aad2292ab01c -r https://management.azure.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Graph token</strong> (resource <code>graph.microsoft.com</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c d3590ed6-52b3-4102-aeff-aad2292ab01c -r https://graph.microsoft.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Storage token</strong> (resource <code>storage.azure.com</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c d3590ed6-52b3-4102-aeff-aad2292ab01c -r https://storage.azure.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Teams token</strong> (resource <code>api.spaces.skype.com</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c 1fec8e78-bce4-4aaf-ab1b-5451cc387264 -r https://api.spaces.skype.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Key Vault token</strong> (resource <code>vault.azure.net</code>):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {USERNAME} -p '{PASSWORD}' -c d3590ed6-52b3-4102-aeff-aad2292ab01c -r https://vault.azure.net"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /get-tokens-body -->
+    </div><!-- /get-tokens -->
+
+    <!-- â•â• TOKEN CACHE LOCATIONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="cache-locations">
+        <h3 data-toggle="cache-locations-body" onclick="toggleSection('cache-locations-body')">
+            <i class="fas fa-folder-open"></i> Token Cache Locations
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="cache-locations-body">
+
+            <div class="description">
+                Where each CLI tool caches its MSAL access/refresh tokens on disk:
+            </div>
+
+            <div class="artifact-table">
+                <div class="artifact-row artifact-header" style="grid-template-columns: 220px 1fr;">
+                    <span>CLI Tool</span><span>Tokens Location</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 220px 1fr;">
+                    <span class="artifact-name">Azure CLI â‰¥ 2.30.0</span>
+                    <span class="artifact-path">(Windows) C:\Users\&lt;username&gt;\.azure\msal_token_cache.bin<br>(Linux / Mac) ~/.azure/msal_token_cache.json</span>
+                </div>
+                <div class="artifact-row" style="grid-template-columns: 220px 1fr;">
+                    <span class="artifact-name">PowerShell Az â‰¥ 2.4.0</span>
+                    <span class="artifact-path">(Windows) C:\Users\&lt;username&gt;\AppData\Local\.IdentityService\msal.cache</span>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /cache-locations-body -->
+    </div><!-- /cache-locations -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+

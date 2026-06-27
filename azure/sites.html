@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sites</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(az)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const appRaw = azGet('appInput');
+            const rgRaw  = azGet('rgInput');
+            const appSpan = azSpan(appRaw, 'mbtwiki');
+            const rgSpan  = azSpan(rgRaw,  'mbt-rg-11');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{APP}', () => appSpan)
+                    .replaceAll('{RG}', () => rgSpan);
+            });
+            try {
+                localStorage.setItem('az_sites_app', appRaw);
+                localStorage.setItem('az_sites_rg', rgRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    appInput: 'az_sites_app', rgInput: 'az_sites_rg'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#enumeration">Enumeration</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">Sites</h1>
+
+    <!-- ══ OVERVIEW ══════════════════════════════════════════ -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>Azure App Service (Web Apps)</strong> — hosts web apps, REST APIs, and mobile backends. Enumerating a site's configuration can reveal app settings (secrets), connection strings, deployment credentials, and a managed identity.</li>
+                <li><strong>Publishing profiles</strong> — contain plaintext deployment credentials (FTP/MSDeploy) that can be used to pull or push code to the site.</li>
+                <li><strong>SCM / Kudu</strong> — the source control management endpoint (<code>https://&lt;app&gt;.scm.azurewebsites.net</code>) exposes a console, file browser, and deployment API for the site.</li>
+            </ul>
+            <div class="note-box info">
+                <i class="fas fa-circle-info"></i>
+                <span>To access the <strong>SCM (Kudu)</strong> endpoint for this site, the <strong>Website Contributor</strong> role must be assigned first — without it, requests to <code>https://&lt;app&gt;.scm.azurewebsites.net</code> will be denied.</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- ══ ENUMERATION (AZ CLI) ═════════════════════════════ -->
+    <div class="topic-section red" id="enumeration">
+        <h3 data-toggle="enumeration-body" onclick="toggleSection('enumeration-body')">
+            <i class="fas fa-magnifying-glass"></i> Enumeration (AZ CLI)
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="enumeration-body">
+
+            <div class="command-container">
+
+                <div class="user-bar">
+                    <label for="appInput"><i class="fas fa-globe"></i> App Name</label>
+                    <input type="text" id="appInput" placeholder="mbtwiki" oninput="azUpdate()">
+                    <label for="rgInput"><i class="fas fa-folder"></i> Resource Group</label>
+                    <input type="text" id="rgInput" placeholder="mbt-rg-11" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Show the web app</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp show --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List enabled host names</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp show --name {APP} --resource-group {RG} --query &quot;enabledHostNames&quot; -o table"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Show site configuration</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp config show --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List app settings</strong> (env vars / secrets):</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp config appsettings list --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List connection strings</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp config connection-string list --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Show the site's managed identity</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp identity show --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List publishing profiles</strong> (full JSON):</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp deployment list-publishing-profiles --name {APP} --resource-group {RG} -o json"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List publishing profiles</strong> (method, URL, deployment credentials):</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="az webapp deployment list-publishing-profiles --name {APP} --resource-group {RG} --query &quot;[].{method:publishMethod, url:publishUrl, user:userName, pwd:userPWD}&quot; -o jsonc"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Show deployment source</strong> configuration:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp deployment source show --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List mounted storage accounts</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp config storage-account list --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List VNet integrations</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp vnet-integration list --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Show access restrictions</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="az webapp config access-restriction show --name {APP} --resource-group {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- ══ ENUMERATION (AZ POWERSHELL) ════════════════════════ -->
+    <div class="topic-section green" id="enumeration-powershell">
+        <h3 data-toggle="enumeration-powershell-body" onclick="toggleSection('enumeration-powershell-body')">
+            <i class="fas fa-magnifying-glass"></i> Enumeration (AZ PowerShell)
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="enumeration-powershell-body">
+
+            <div class="command-container">
+
+                <div class="description"><strong>Show the web app</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzWebApp -Name {APP} -ResourceGroupName {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Store the web app object</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="$app = Get-AzWebApp -Name {APP} -ResourceGroupName {RG}"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Get app settings</strong> (env vars / secrets):</div>
+                <div class="command-box">
+                    <span class="command" data-base="$app.SiteConfig.AppSettings | Select-Object Name, Value"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Get connection strings</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="$app.SiteConfig.ConnectionStrings"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Get managed identity</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="$app.Identity"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List enabled host names</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="(Get-AzWebApp -Name {APP} -ResourceGroupName {RG}).EnabledHostNames"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>Get publishing profile</strong> (deployment credentials):</div>
+                <div class="command-box">
+                    <span class="command" data-base="Get-AzWebAppPublishingProfile -Name {APP} -ResourceGroupName {RG} -Format WebDeploy"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

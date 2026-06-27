@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Automation</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(Get-AzAutomationAccount|Get-AzAccessToken|Get-AzAutomationJob|Get-AzSubscription|Invoke-RestMethod)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const jobIdRaw = azGet('jobIdInput');
+            const jobIdSpan = azSpan(jobIdRaw, '<JobId>');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{JOBID}', () => jobIdSpan);
+            });
+            try {
+                localStorage.setItem('az_auto_jobid', jobIdRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const jobId = localStorage.getItem('az_auto_jobid') || '';
+                if (jobId) document.getElementById('jobIdInput').value = jobId;
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- ── Sidebar ──────────────────────────────────────────────── -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#overview">Overview</a></li>
+        <li><a href="#permissions">Permissions</a></li>
+        <li><a href="#jobs">Jobs</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- ── Main Content ─────────────────────────────────────────── -->
+<div class="main-content">
+
+    <h1 class="page-title">Automation</h1>
+
+    <!-- ══ OVERVIEW ══════════════════════════════════════════ -->
+    <div class="topic-section mauve" id="overview">
+        <h3 data-toggle="overview-body" onclick="toggleSection('overview-body')">
+            <i class="fas fa-box-archive"></i> Overview
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="overview-body">
+            <ul class="inv-questions">
+                <li><strong>Azure Automation Account</strong> — hosts runbooks, jobs, credentials, and variables for automating Azure infrastructure tasks.</li>
+                <li><strong>Runbooks</strong> — PowerShell or Python scripts that run on a schedule or manually to perform automated tasks.</li>
+                <li><strong>Jobs</strong> — execution records of runbooks, with logs and output that can reveal sensitive information or expose automation failures.</li>
+                <li><strong>Permissions</strong> — RBAC determines whether an attacker can read/execute runbooks, modify credentials, or exfiltrate job output.</li>
+            </ul>
+        </div>
+    </div>
+
+    <!-- ══ PERMISSIONS ════════════════════════════════════════ -->
+    <div class="topic-section red" id="permissions">
+        <h3 data-toggle="permissions-body" onclick="toggleSection('permissions-body')">
+            <i class="fas fa-user-shield"></i> Permissions
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="permissions-body">
+
+            <div class="command-container">
+
+                <div class="description"><strong>Check permissions on Automation account</strong>:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$AutomationAccount = Get-AzAutomationAccount
+$Token = (Get-AzAccessToken -AsSecureString).Token
+$AccessToken = [System.Net.NetworkCredential]::new(&quot;&quot;, $Token).Password
+$SubscriptionID = $AutomationAccount.SubscriptionID
+$ResourceGroupName = $AutomationAccount.ResourceGroupName
+$AutomationAccountName = $AutomationAccount.AutomationAccountName
+$URI = &quot;https://management.azure.com/subscriptions/$SubscriptionID/resourceGroups/$ResourceGroupName/providers/Microsoft.Automation/automationAccounts/$AutomationAccountName/providers/Microsoft.Authorization/permissions?api-version=2022-04-01&quot;
+$RequestParams = @{
+    Method  = 'GET'
+    Uri     = $URI
+    Headers = @{
+        'Authorization' = &quot;Bearer $AccessToken&quot;
+    }
+    ContentType = &quot;application/json&quot;
+}
+$Result = Invoke-RestMethod @RequestParams
+$Result.value | fl *
+$Result.value.actions | fl *"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+    <!-- ══ JOBS ══════════════════════════════════════════════ -->
+    <div class="topic-section green" id="jobs">
+        <h3 data-toggle="jobs-body" onclick="toggleSection('jobs-body')">
+            <i class="fas fa-briefcase"></i> Jobs
+            <span class="toggle-icon">▼</span>
+        </h3>
+        <div class="topic-body" id="jobs-body">
+
+            <div class="command-container">
+
+                <div class="description"><strong>Get the Automation account</strong>:</div>
+                <div class="command-box">
+                    <span class="command" data-base="$AutomationAccount = Get-AzAutomationAccount"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="description"><strong>List all jobs</strong> in the Automation account:</div>
+                <div class="command-box">
+                    <span class="command" data-base="$Jobs = Get-AzAutomationJob -ResourceGroupName $AutomationAccount.ResourceGroupName -AutomationAccountName $AutomationAccount.AutomationAccountName"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="jobIdInput"><i class="fas fa-id-badge"></i> Job ID</label>
+                    <input type="text" id="jobIdInput" placeholder="&lt;JobId&gt;" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description"><strong>Read job output</strong> for a specific job:</div>
+                <div class="command-box multi">
+                    <span class="command multi" data-base="$AutomationAccount = Get-AzAutomationAccount
+$Token = (Get-AzAccessToken -AsSecureString).Token
+$AccessToken = [System.Net.NetworkCredential]::new(&quot;&quot;, $Token).Password
+$SubscriptionID = (Get-AzSubscription).Id
+$ResourceGroupName = $AutomationAccount.ResourceGroupName
+$AutomationAccountName = $AutomationAccount.AutomationAccountName
+$JobId = {JOBID}
+$URI = &quot;https://management.azure.com/subscriptions/$SubscriptionID/resourceGroups/$ResourceGroupName/providers/Microsoft.Automation/automationAccounts/$AutomationAccountName/jobs/$JobId/output?api-version=2017-05-15-preview&quot;
+$RequestParams = @{
+    Method = 'GET'
+    Uri = $URI
+    Headers = @{
+        'Authorization' = &quot;Bearer $AccessToken&quot;
+    }
+}
+(Invoke-RestMethod @RequestParams)"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">📄</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div>
+    </div>
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>

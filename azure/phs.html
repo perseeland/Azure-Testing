@@ -1,0 +1,420 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PHS</title>
+    <link rel="stylesheet" href="azure.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .command-box.multi { align-items: flex-start; }
+        .command.multi { white-space: pre-wrap; word-break: normal; overflow-wrap: anywhere; }
+    </style>
+    <script>
+        function toggleSection(id) {
+            const body = document.getElementById(id);
+            const icon = document.querySelector(`[data-toggle="${id}"] .toggle-icon`);
+            body.classList.toggle('collapsed');
+            icon.textContent = body.classList.contains('collapsed') ? 'â–¶' : 'â–¼';
+        }
+
+        function copyToClipboard(command, btn) {
+            navigator.clipboard.writeText(command).then(() => {
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = 'âœ“';
+                    setTimeout(() => { btn.textContent = orig; }, 1500);
+                }
+            }).catch(err => console.error('Failed to copy:', err));
+        }
+
+        function escapeHtml(s) {
+            return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        }
+
+        function azGet(id) {
+            const el = document.getElementById(id);
+            return el ? el.value.trim() : '';
+        }
+
+        function azSpan(raw, fallback) {
+            const v = raw || fallback;
+            return raw
+                ? `<span class="val-filled">${escapeHtml(v)}</span>`
+                : `<span class="val-empty">${escapeHtml(v)}</span>`;
+        }
+
+        // Lightweight syntax highlighting (input is already HTML-escaped)
+        function azSyntax(s) {
+            s = s.replace(/\$\{?\w+\}?/g, m => `<span class="tok-var">${m}</span>`);
+            s = s.replace(/\b(findmeaccess|ConvertTo-SecureString|Connect-MgGraph|Get-MgUser|Select-Object|Out-File|curl|jq|grep|echo|python3)\b/g, '<span class="tok-key">$1</span>');
+            return s;
+        }
+
+        function azUpdate() {
+            const tokRaw = azGet('tokenInput');
+            const armRaw = azGet('armTokenInput');
+            const subRaw = azGet('subidInput');
+            const rgRaw  = azGet('rgInput');
+            const ipRaw  = azGet('ipNameInput');
+            const mgUserRaw  = azGet('mgEmailInput');
+            const mgPassRaw  = azGet('mgPassInput');
+            const armUserRaw = azGet('armEmailInput');
+            const armPassRaw = azGet('armPassInput');
+            const tokSpan = azSpan(tokRaw, '{MG_TOKEN_SNIPPET}');
+            const armSpan = azSpan(armRaw, '{ARM_TOKEN_SNIPPET}');
+            const subSpan = azSpan(subRaw, '{SUBSCRIPTION_ID}');
+            const rgSpan  = azSpan(rgRaw,  '{RESOURCE_GROUP}');
+            const ipSpan  = azSpan(ipRaw,  '{IP_NAME}');
+            const mgUserSpan  = azSpan(mgUserRaw,  '{USERNAME3@COMPANY.com}');
+            const mgPassSpan  = azSpan(mgPassRaw,  '{PASSWORD_PLACEHOLDER}');
+            const armUserSpan = azSpan(armUserRaw, '{USERNAME2@COMPANY.com}');
+            const armPassSpan = azSpan(armPassRaw, '{PASSWORD_PLACEHOLDER3}');
+            document.querySelectorAll('.command').forEach(el => {
+                let raw = el.getAttribute('data-base');
+                if (raw === null) {
+                    if (el.dataset.orig === undefined) el.dataset.orig = el.textContent;
+                    raw = el.dataset.orig;
+                }
+                el.innerHTML = azSyntax(escapeHtml(raw))
+                    .replaceAll('{TOKEN}', () => tokSpan)
+                    .replaceAll('{ARMTOKEN}', () => armSpan)
+                    .replaceAll('{SUBID}', () => subSpan)
+                    .replaceAll('{RG}', () => rgSpan)
+                    .replaceAll('{IPNAME}', () => ipSpan)
+                    .replaceAll('{MGUSER}', () => mgUserSpan)
+                    .replaceAll('{MGPASS}', () => mgPassSpan)
+                    .replaceAll('{ARMUSER}', () => armUserSpan)
+                    .replaceAll('{ARMPASS}', () => armPassSpan);
+            });
+            try {
+                localStorage.setItem('az_mgtoken', tokRaw);
+                localStorage.setItem('az_pdc_token', armRaw);
+                localStorage.setItem('az_pdc_subid', subRaw);
+                localStorage.setItem('az_pdc_rg', rgRaw);
+                localStorage.setItem('az_pdc_ipname', ipRaw);
+                localStorage.setItem('az_mg_user', mgUserRaw);
+                localStorage.setItem('az_mg_pass', mgPassRaw);
+                localStorage.setItem('az_arm_user', armUserRaw);
+                localStorage.setItem('az_arm_pass', armPassRaw);
+            } catch (e) {}
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const map = {
+                    tokenInput: 'az_mgtoken', armTokenInput: 'az_pdc_token',
+                    subidInput: 'az_pdc_subid', rgInput: 'az_pdc_rg', ipNameInput: 'az_pdc_ipname',
+                    mgEmailInput: 'az_mg_user', mgPassInput: 'az_mg_pass',
+                    armEmailInput: 'az_arm_user', armPassInput: 'az_arm_pass'
+                };
+                Object.entries(map).forEach(([id, key]) => {
+                    const el = document.getElementById(id);
+                    const val = localStorage.getItem(key) || '';
+                    if (el && val) el.value = val;
+                });
+            } catch (e) {}
+            azUpdate();
+        });
+    </script>
+</head>
+<body>
+
+<!-- â”€â”€ Sidebar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="side-nav">
+    <h2>Azure</h2>
+    <ul>
+        <li class="nav-group ng-std">Tools</li>
+        <li><a href="az-powershell.html">AZ PowerShell</a></li>
+        <li><a href="az-cli.html">AZ CLI</a></li>
+        <li><a href="mg-graph.html">MG Graph</a></li>
+        <li><a href="tokens.html">Tokens</a></li>
+        <li><a href="cloud-prowl.html">Cloud Prowl</a></li>
+        <li><a href="roadtx.html">roadtx</a></li>
+        <li><a href="aadinternals.html">AADInternals</a></li>
+        <li><a href="graphrunner.html">GraphRunner</a></li>
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Pages</li>
+        <li><a href="external-recon.html">External Recon</a></li>
+        <li><a href="identity-users-creds.html">Identity: Valid Users &amp; Creds</a></li>
+        <li><a href="internal-recon.html">Internal (Resource) Recon</a></li>
+        <li><a href="cap.html">CAP</a></li>
+        <li><a href="mfa.html">MFA</a></li>
+        <li><a href="phs.html">PHS</a></li>
+        <li><a href="managed-identity.html">Managed Identity</a></li>
+        <!-- ADD NEW PAGE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Resources</li>
+        <li><a href="virtual-machines.html">Virtual Machines</a></li>
+        <li><a href="automation-account.html">Automation Account</a></li>
+        <li><a href="network.html">Network</a></li>
+        <li><a href="power-platform.html">Power Platform (BAP)</a></li>
+        <li><a href="storage-account.html">Storage Account</a></li>
+        <li><a href="container-app.html">Container App</a></li>
+        <li><a href="mysql-flexible-server.html">MySQL Flexible Server</a></li>
+        <li><a href="azure-key-vault.html">Azure Key Vault</a></li>
+        <li><a href="sites.html">Sites</a></li>
+        <li><a href="automation.html">Automation</a></li>
+        <!-- ADD NEW RESOURCE LINKS HERE -->
+        <li class="nav-divider"></li>
+        <li class="nav-group ng-std">Sections</li>
+        <li><a href="#get-mg-token">Get MG Token</a></li>
+        <li><a href="#connect-mggraph">Connect to MgGraph</a></li>
+        <li><a href="#synced-users">Extract Synced Users</a></li>
+        <li><a href="#arm-token">Get ARM Token</a></li>
+        <li><a href="#list-subs">List Subscriptions</a></li>
+        <li><a href="#list-resources">List Resources</a></li>
+        <li><a href="#pdc-ip">Obtain PDC IP</a></li>
+        <!-- ADD NEW SECTION LINKS HERE -->
+    </ul>
+</div>
+
+<!-- â”€â”€ Main Content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€ -->
+<div class="main-content">
+
+    <h1 class="page-title">PHS</h1>
+
+    <!-- â•â• GET MG TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="get-mg-token">
+        <h3 data-toggle="get-mg-token-body" onclick="toggleSection('get-mg-token-body')">
+            <i class="fas fa-key"></i> Get MG Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="get-mg-token-body">
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="mgEmailInput"><i class="fas fa-user"></i> Email</label>
+                    <input type="text" id="mgEmailInput" placeholder="{USERNAME3@COMPANY.com}" oninput="azUpdate()">
+                    <label for="mgPassInput"><i class="fas fa-lock"></i> Password</label>
+                    <input type="text" id="mgPassInput" placeholder="{PASSWORD_PLACEHOLDER}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="description">
+                    <strong>Request a Microsoft Graph token</strong> (FindMeAccess):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {MGUSER} -p '{MGPASS}' -c d3590ed6-52b3-4102-aeff-aad2292ab01c -r https://graph.microsoft.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /get-mg-token-body -->
+    </div><!-- /get-mg-token -->
+
+    <!-- â•â• CONNECT TO MGGRAPH â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="connect-mggraph">
+        <h3 data-toggle="connect-mggraph-body" onclick="toggleSection('connect-mggraph-body')">
+            <i class="fas fa-plug"></i> Connect to MgGraph
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="connect-mggraph-body">
+
+            <div class="command-container">
+
+                <div class="cmd-label">Microsoft Graph PowerShell</div>
+
+                <div class="user-bar">
+                    <label for="tokenInput"><i class="fas fa-key"></i> MG Access Token</label>
+                    <input type="text" id="tokenInput" placeholder="{MG_TOKEN_SNIPPET}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set the token</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='$MGAccessToken = "{TOKEN}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>Convert to a secure string and connect</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command">$secureTokenString = ConvertTo-SecureString -String $MGAccessToken -AsPlainText -Force</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+                <div class="command-box">
+                    <span class="command">Connect-MgGraph -AccessToken $secureTokenString</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /connect-mggraph-body -->
+    </div><!-- /connect-mggraph -->
+
+    <!-- â•â• EXTRACT SYNCED USERS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="synced-users">
+        <h3 data-toggle="synced-users-body" onclick="toggleSection('synced-users-body')">
+            <i class="fas fa-users-gear"></i> Extract Synced Users
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="synced-users-body">
+
+            <div class="command-container">
+                <div class="cmd-label">Microsoft Graph PowerShell</div>
+                <div class="description">
+                    <strong>List on-prem synced users</strong> (UPNs) to a file:
+                </div>
+                <div class="command-box">
+                    <span class="command">Get-MgUser -Filter "onPremisesSyncEnabled eq true" | Select-Object -ExpandProperty UserPrincipalName | Out-File onprem_sync_users.txt</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /synced-users-body -->
+    </div><!-- /synced-users -->
+
+    <!-- â•â• DETERMINE PDC PUBLIC IP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <h2 class="page-title" style="font-size:1.1rem; margin-top:28px;">Determine the Public IP of the PDC</h2>
+    <p class="page-subtitle">Using an identity with access to Virtual Machine IP information, obtain ARM API tokens and search for the Primary Domain Controller's public IP.</p>
+
+    <!-- â•â• GET ARM TOKEN â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section red" id="arm-token">
+        <h3 data-toggle="arm-token-body" onclick="toggleSection('arm-token-body')">
+            <i class="fas fa-key"></i> Get ARM Token
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="arm-token-body">
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="armEmailInput"><i class="fas fa-user"></i> Email</label>
+                    <input type="text" id="armEmailInput" placeholder="{USERNAME2@COMPANY.com}" oninput="azUpdate()">
+                    <label for="armPassInput"><i class="fas fa-lock"></i> Password</label>
+                    <input type="text" id="armPassInput" placeholder="{PASSWORD_PLACEHOLDER3}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+                <div class="description">
+                    <strong>Request an ARM API token</strong> (identity with VM IP access):
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="findmeaccess token -u {ARMUSER} -p '{ARMPASS}' -c d3590ed6-52b3-4102-aeff-aad2292ab01c -r https://management.azure.com"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="user-bar">
+                    <label for="armTokenInput"><i class="fas fa-key"></i> ARM Access Token</label>
+                    <input type="text" id="armTokenInput" placeholder="{ARM_TOKEN_SNIPPET}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set the token</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='$ACCESS_TOKEN="{ARMTOKEN}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /arm-token-body -->
+    </div><!-- /arm-token -->
+
+    <!-- â•â• LIST SUBSCRIPTIONS â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section green" id="list-subs">
+        <h3 data-toggle="list-subs-body" onclick="toggleSection('list-subs-body')">
+            <i class="fas fa-list"></i> List Subscriptions
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="list-subs-body">
+
+            <div class="command-container">
+                <div class="description">
+                    <strong>Enumerate subscriptions</strong>:
+                </div>
+                <div class="command-box multi">
+                    <span class="command multi">curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "https://management.azure.com/subscriptions?api-version=2020-01-01" \
+| jq '.value[] | {subscriptionId: .subscriptionId, displayName: .displayName}'</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /list-subs-body -->
+    </div><!-- /list-subs -->
+
+    <!-- â•â• LIST RESOURCES â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section peach" id="list-resources">
+        <h3 data-toggle="list-resources-body" onclick="toggleSection('list-resources-body')">
+            <i class="fas fa-cubes"></i> List Resources
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="list-resources-body">
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="subidInput"><i class="fas fa-id-card"></i> Subscription ID</label>
+                    <input type="text" id="subidInput" placeholder="{SUBSCRIPTION_ID}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Set the subscription ID</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base='$SUBSCRIPTION_ID="{SUBID}"'></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+
+                <div class="description">
+                    <strong>List resources and filter for IP addresses</strong>:
+                </div>
+                <div class="command-box">
+                    <span class="command">curl -s -H "Authorization: Bearer $ACCESS_TOKEN" "https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resources?api-version=2021-04-01" | jq '.value[] | {Type: .type, Name: .name, Id: .id}' | grep -i ipAddress</span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /list-resources-body -->
+    </div><!-- /list-resources -->
+
+    <!-- â•â• OBTAIN PDC IP â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+    <div class="topic-section pink" id="pdc-ip">
+        <h3 data-toggle="pdc-ip-body" onclick="toggleSection('pdc-ip-body')">
+            <i class="fas fa-location-crosshairs"></i> Obtain the PDC IP Address
+            <span class="toggle-icon">â–¼</span>
+        </h3>
+        <div class="topic-body" id="pdc-ip-body">
+
+            <div class="command-container">
+                <div class="user-bar">
+                    <label for="rgInput"><i class="fas fa-layer-group"></i> Resource Group</label>
+                    <input type="text" id="rgInput" placeholder="{RESOURCE_GROUP}" oninput="azUpdate()">
+                    <label for="ipNameInput"><i class="fas fa-network-wired"></i> Public IP Name</label>
+                    <input type="text" id="ipNameInput" placeholder="{IP_NAME}" oninput="azUpdate()">
+                    <button type="button" class="cl-clear-btn" onclick="clearInputs(this)"><i class="fas fa-eraser"></i> Clear</button>
+                </div>
+
+                <div class="description">
+                    <strong>Query the public IP resource</strong> of the PDC:
+                </div>
+                <div class="command-box">
+                    <span class="command" data-base="curl -s -H &quot;Authorization: Bearer $ACCESS_TOKEN&quot; &quot;https://management.azure.com/subscriptions/$SUBSCRIPTION_ID/resourceGroups/{RG}/providers/Microsoft.Network/publicIPAddresses/{IPNAME}?api-version=2024-07-01&quot; | jq"></span>
+                    <button onclick="copyToClipboard(this.previousElementSibling.textContent, this)">ðŸ“„</button>
+                </div>
+            </div>
+
+            <!-- ADD NOTES HERE -->
+
+        </div><!-- /pdc-ip-body -->
+    </div><!-- /pdc-ip -->
+
+</div><!-- /main-content -->
+<script src="azure.js"></script>
+</body>
+</html>
+
